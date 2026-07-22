@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chris Huang | Personal Website</title>
+
+<style>
+:root{
+    --bg:#f6f8fb;
+    --card:#ffffff;
+    --text:#1d2939;
+    --muted:#667085;
+    --accent:#1e88e5;
+    --accent2:#0f5db8;
+    --border:#e4e7ec;
+    --shadow:0 12px 40px rgba(16,24,40,.08);
+    --radius:18px;
+    --max:1100px;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    scroll-behavior:smooth;
+}
+
+body{
+    font-family:Inter,Segoe UI,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.75;
+}
+
+nav{
+    position:fixed;
+    top:0;
+    width:100%;
+    backdrop-filter:blur(12px);
+    background:rgba(255,255,255,.82);
+    border-bottom:1px solid rgba(0,0,0,.05);
+    z-index:999;
+}
+
+.nav-container{
+    max-width:var(--max);
+    margin:auto;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:18px 22px;
+}
+
+.logo{
+    font-size:1.25rem;
+    font-weight:700;
+    letter-spacing:.5px;
+}
+
+.logo span{
+    color:var(--accent);
+}
+
+nav ul{
+    display:flex;
+    list-style:none;
+    gap:28px;
+}
+
+nav a{
+    text-decoration:none;
+    color:var(--text);
+    font-size:.95rem;
+    transition:.25s;
+}
+
+nav a:hover{
+    color:var(--accent);
+}
+
+.hero{
+    padding-top:120px;
+    padding-bottom:80px;
+}
+
+.container{
+    max-width:var(--max);
+    margin:auto;
+    padding:0 22px;
+}
+
+.hero-grid{
+    display:grid;
+    grid-template-columns:320px 1fr;
+    gap:60px;
+    align-items:center;
+}
+
+.photo-box{
+    width:300px;
+    height:360px;
+    border-radius:24px;
+    overflow:hidden;
+    background:#edf2f7;
+    border:1px solid var(--border);
+    box-shadow:var(--shadow);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    position:relative;
+}
+
+.photo-box img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.placeholder{
+    position:absolute;
+    color:#98a2b3;
+    text-align:center;
+    padding:20px;
+    font-size:.95rem;
+}
+
+.hero h1{
+    font-size:3rem;
+    margin-bottom:12px;
+}
+
+.hero h2{
+    color:var(--accent);
+    font-size:1.15rem;
+    font-weight:600;
+    margin-bottom:24px;
+}
+
+.hero p{
+    color:var(--muted);
+    font-size:1.05rem;
+}
+
+.button{
+    display:inline-block;
+    margin-top:28px;
+    background:var(--accent);
+    color:white;
+    text-decoration:none;
+    padding:13px 22px;
+    border-radius:12px;
+    transition:.25s;
+}
+
+.button:hover{
+    background:var(--accent2);
+}
+
+section{
+    padding:35px 0;
+}
+
+.card{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:40px;
+    margin-bottom:28px;
+}
+
+h3{
+    font-size:1.6rem;
+    margin-bottom:18px;
+}
+
+.card p{
+    color:var(--muted);
+    margin-bottom:18px;
+}
+
+.skills{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:18px;
+    margin-top:20px;
+}
+
+.skill{
+    border:1px solid var(--border);
+    padding:18px;
+    border-radius:14px;
+    background:#fafcff;
+    text-align:center;
+    font-weight:600;
+}
+
+footer{
+    text-align:center;
+    color:var(--muted);
+    padding:40px 20px 60px;
+}
+
+.contact{
+    font-size:1.05rem;
+}
+
+.contact a{
+    color:var(--accent);
+    text-decoration:none;
+}
+
+@media(max-width:850px){
+
+.hero-grid{
+grid-template-columns:1fr;
+text-align:center;
+}
+
+.photo-box{
+margin:auto;
+}
+
+nav ul{
+gap:14px;
+font-size:.9rem;
+flex-wrap:wrap;
+justify-content:flex-end;
+}
+
+.hero h1{
+font-size:2.2rem;
+}
+
+.card{
+padding:28px;
+}
+
+}
+
+</style>
+</head>
+
+<body>
+
+<nav>
+<div class="nav-container">
+<div class="logo">Chris <span>Huang</span></div>
+
+<ul>
+<li><a href="#about">About</a></li>
+<li><a href="#skills">Skills</a></li>
+<li><a href="#experience">Achievements</a></li>
+<li><a href="#contact">Contact</a></li>
+</ul>
+
+</div>
+</nav>
+
+<header class="hero">
+<div class="container">
+
+<div class="hero-grid">
+
+<div class="photo-box">
+
+<img src="photo.jpg"
+alt="Chris Huang"
+onerror="this.style.display='none';document.getElementById('placeholder').style.display='block';">
+
+<div class="placeholder" id="placeholder">
+<strong>Profile Photo</strong><br><br>
+Place your image here as<br>
+<b>photo.jpg</b>
+</div>
+
+</div>
+
+<div>
+
+<h1>Chris Huang</h1>
+
+<h2>G9 Student | City-Level Golf Awardee | Multiple International Martial Arts Champion | Self-Disciplined & Resilient</h2>
+
+<p>
+Dedicated to continuous growth in both academics and athletics, I believe that true excellence comes from consistency, discipline, and a willingness to challenge myself every day.
+</p>
+
+<a class="button" href="#contact">Get in Touch</a>
+
+</div>
+
+</div>
+
+</div>
+</header>
+
+<div class="container">
+
+<section id="about">
+
+<div class="card">
+
+<h3>About Me</h3>
+
+<p>
+I am a Grade 9 student at an international school with a strong passion for both academic achievement and athletic excellence. Through years of dedicated training, I have developed the discipline, perseverance, and resilience needed to perform at a high level in competitive sports while maintaining a balanced academic life. Careful time management allows me to effectively balance school responsibilities with intensive daily training, helping me continuously improve in every area.
+</p>
+
+<p>
+My journey has been shaped by a combination of Eastern values of resilience and self-discipline together with the confidence, communication skills, and global perspective fostered through an international education. Whether on the golf course, in martial arts competition, or in the classroom, I strive to embrace challenges, pursue continuous growth, and always give my best effort.
+</p>
+
+</div>
+
+</section>
+
+<section id="skills">
+
+<div class="card">
+
+<h3>Skills</h3>
+
+<div class="skills">
+
+<div class="skill">Traditional Martial Arts</div>
+
+<div class="skill">Tai Chi (Taiji)</div>
+
+<div class="skill">Golf</div>
+
+<div class="skill">Street Dance</div>
+
+</div>
+
+<br>
+
+<p>
+My interests span both traditional and modern disciplines, allowing me to develop a well-rounded set of physical, mental, and interpersonal skills. Traditional martial arts and Tai Chi have strengthened my focus, patience, self-control, and respect for others, while golf has taught me precision, strategic thinking, and emotional composure under pressure.
+</p>
+
+<p>
+Street dance adds creativity, rhythm, teamwork, and self-expression to my skill set, helping me become adaptable and confident in different environments. Together, these experiences have shaped me into someone who values discipline, continuous learning, and the pursuit of excellence across every challenge.
+</p>
+
+</div>
+
+</section>
+
+<section id="experience">
+
+<div class="card">
+
+<h3>Activities & Achievements</h3>
+
+<p>
+I have earned multiple gold medals across various events within the Hong Kong martial arts community and have also achieved success in numerous international traditional martial arts competitions. These experiences have strengthened my competitive mindset while reinforcing the importance of humility, perseverance, and respect for every opponent.
+</p>
+
+<p>
+Beyond martial arts, I have received recognition in city-level golf competitions, demonstrating my ability to excel across different sporting disciplines. Competing in both individual and international events has enhanced my adaptability, leadership, and confidence, inspiring me to continually push beyond my limits while representing my school and community with pride.
+</p>
+
+</div>
+
+</section>
+
+<section id="contact">
+
+<div class="card">
+
+<h3>Contact</h3>
+
+<p class="contact">
+Email:
+<a href="mailto:13605808003@163.com">
+13605808003@163.com
+</a>
+</p>
+
+<p>
+Thank you for visiting my website. I am always eager to learn, grow, and connect with people who share a passion for excellence, leadership, and personal development.
+</p>
+
+</div>
+
+</section>
+
+</div>
+
+<footer>
+© 2026 Chris Huang • Personal Website
+</footer>
+
+</body>
+</html>
