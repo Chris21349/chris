@@ -1,0 +1,41 @@
+{
+  "id": "./",
+  "name": "萌塔守卫 · Chibi Keep",
+  "short_name": "萌塔守卫",
+  "description": "绒光花园的塔防游戏：九章冒险、八位可觉醒英雄、星愿抽卡、英雄升星、每日签到与绒光邮局。",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone"
+  ],
+  "orientation": "portrait",
+  "background_color": "#fdf7ec",
+  "theme_color": "#7fa36a",
+  "categories": [
+    "games",
+    "entertainment"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
