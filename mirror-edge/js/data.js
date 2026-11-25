@@ -31,8 +31,8 @@
       cape: '#221345', hair: '#d8c2ff', blade: '#f6f0ff', bladeDark: '#a88ce0', eye: '#d9c6ff',
     },
     void: {
-      body: '#152430', bodyLight: '#26414f', dark: '#050a0e', rim: '#7df0ff', glow: '#20b4d8', accent: '#ffffff',
-      cape: '#071a22', hair: '#8ef3ff', blade: '#ffffff', bladeDark: '#86c8d8', eye: '#ffffff',
+      body: '#2b2418', bodyLight: '#4a3d26', dark: '#0d0a05', rim: '#ffe2a0', glow: '#ffb54d', accent: '#fff8e4',
+      cape: '#3a2a10', hair: '#ffdf9e', blade: '#fffaf0', bladeDark: '#d8b070', eye: '#ffd98a',
     },
   };
 
