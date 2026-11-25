@@ -583,7 +583,7 @@
       if (this.dead && this.stateT > 3) return;
       if (reflection) {
         ctx.save();
-        ctx.globalAlpha = 0.2;
+        ctx.globalAlpha = 0.085;
         ctx.scale(1, -1);
         this._draw(ctx, true);
         ctx.restore();
@@ -608,7 +608,7 @@
       ctx.restore();
 
       // 底层光晕
-      if (!this.dead) {
+      if (!this.dead && !reflection) {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         const b = 34 + (this.status.mirrorForm > 0 ? 20 : 0) + (this.status.rage > 0 ? 18 : 0);
