@@ -44,6 +44,7 @@
       }
 
       if (!f.canAct()) { f.moveDir = 0; return; }
+      if (f.state !== 'attack' && f.state !== 'parry' && !f.airborne) f.facing = p.x >= f.x ? 1 : -1;
 
       // 起手前摇：显示预警
       if (f.state === 'attack' && f.act) {
@@ -83,11 +84,7 @@
         if (U.chance(this.prof.dodge * 1.3)) { this.f.tryDash(-dir); return; }
       }
       if (!unblock && U.chance(blockChance)) {
-        if (this.f.char.canParry && U.chance(0.28 * (0.6 + d.punish))) {
-          this.f.startGuard();
-        } else {
-          this.f.startGuard();
-        }
+        this.f.startParry();
         return;
       }
       if (U.chance(this.prof.dodge * (unblock ? 2.2 : 1))) {
@@ -199,7 +196,9 @@
 
     move(dt, dist, dir, speedScale) {
       const f = this.f;
-      if (f.state === 'attack' || f.state === 'stagger' || f.state === 'hurt' || f.state === 'bound') { f.moveDir = 0; return; }
+      if (f.state === 'attack' || f.state === 'stagger' || f.state === 'hurt' || f.state === 'bound' || f.state === 'parry') { f.moveDir = 0; return; }
+      // 敌人始终面向玩家，出招更自然
+      if (!f.airborne) f.facing = f.opponent.x >= f.x ? 1 : -1;
       if (dist > this.desired + 50) f.moveDir = dir;
       else if (dist < this.desired - 60) f.moveDir = -dir;
       else f.moveDir = 0;
