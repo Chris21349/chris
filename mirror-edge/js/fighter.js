@@ -34,6 +34,7 @@
       this.strikes = []; this.strikeI = 0;
       this.moveDir = 0;
       this.guarding = false; this.parryTimer = 0; this.parryCd = 0; this.parryCdMax = 3;
+      this.parryActive = 0; this.parryElapsed = 0; this.parryPerfect = 0.22;
       this.guardHeldT = 0; this.guardLinger = 0; this.counterParry = 0;
       this.dashInv = 0; this.dashT = 0; this.dashCd = 0; this.airDash = 1;
       this.invulnT = 0; this.armorT = 0;
@@ -189,22 +190,19 @@
       }
       this.tickState(dt);
       this.physics(dt);
-      this.faceOpponent(dt);
+      this.faceMove(dt);
       MB.Skeleton.update(this, dt);
       // 残影
       if (this.state === 'dash' && Math.random() < 0.9) MB.FX.after(this, { life: 0.28, alpha: 0.5 });
       if (this.status.mirrorForm > 0 && Math.random() < 0.25) MB.FX.after(this, { life: 0.35, alpha: 0.25, color: '#b27bff' });
     }
 
-    faceOpponent(dt) {
-      const o = this.opponent;
-      if (!o) return;
-      const grounded = !this.airborne;
-      const free = this.state === 'idle' || this.state === 'run' || this.state === 'guard';
-      if (grounded && free) {
-        const want = o.x >= this.x ? 1 : -1;
-        if (want !== this.facing) this.facing = want;
-      }
+    faceMove(dt) {
+      if (this.dead) return;
+      const free = this.state === 'idle' || this.state === 'run' || this.state === 'parry' || this.state === 'air';
+      if (!free) return;
+      if (this.moveDir > 0.12) this.facing = 1;
+      else if (this.moveDir < -0.12) this.facing = -1;
     }
 
     /* ───────── 状态机 ───────── */
@@ -248,20 +246,16 @@
           this.tickAction(dt);
           break;
         }
-        case 'guard': {
-          this.vx = U.approach(this.vx, this.moveDir * 100, 2200 * dt);
+        case 'parry': {
+          this.parryActive -= dt;
+          this.parryElapsed += dt;
+          this.vx = U.approach(this.vx, this.moveDir * 120, 2400 * dt);
           if (this.moveDir) this.runPhase += dt * 4;
-          if (this.parryHeld) this.guardHeldT += dt;
-          if (this.parryHeld && this.guardHeldT >= (this.guardMax || 2)) {
-            this.endGuard(true);
-            this.battle.onGuardExhaust(this);
-            break;
+          if (this.parryActive <= 0) {
+            this.parryActive = 0;
+            MB.FX.ring(this.x, -this.y - 55, 50, 14, { color: '#8a7bb8', life: 0.3, width: 1.6, squash: 1.1 });
+            this.resetState('idle');
           }
-          if (this.guardLinger > 0) {
-            this.guardLinger -= dt;
-            if (this.guardLinger <= 0) { this.parryHeld = false; this.parryTimer = 0; this.guarding = false; this.resetState('idle'); }
-          }
-          if (!this.parryHeld && this.guardLinger <= 0) this.guarding = false;
           break;
         }
         case 'hurt': {
@@ -413,7 +407,7 @@
           else { this.buffered = { kind: 'heavy', t: 0.5 }; }
           return true;
         }
-        if (this.state === 'idle' || this.state === 'run' || this.state === 'guard') {
+        if (this.state === 'idle' || this.state === 'run' || this.state === 'parry') {
           this.beginAction(this.char.heavy, 'attack'); return true;
         }
         return false;
@@ -436,7 +430,7 @@
         }
         return true;
       }
-      if (this.state === 'idle' || this.state === 'run' || this.state === 'guard') {
+      if (this.state === 'idle' || this.state === 'run' || this.state === 'parry') {
         this.chainIdx = 0;
         this.beginAction(this.char.light[0], 'attack');
         this.chainT = 0.9;
@@ -481,45 +475,36 @@
       return true;
     }
 
-    startGuard() {
-      if (this.dead || this.status.stun > 0) return;
-      if (this.airborne) return;
-      // 已经在格挡中：不重置持续时间，避免无限重举
-      if (this.state === 'guard' && this.guarding) return;
-      if (this.state === 'attack' || this.state === 'skill' || this.state === 'ult' || this.state === 'hurt' || this.state === 'stagger') {
-        if (this.state !== 'stagger') this.bufferedGuard = 0.55;
-        return;
+    startParry() {
+      if (this.dead || this.status.stun > 0) return false;
+      if (this.parryActive > 0) return false;
+      if (this.parryCd > 0) {
+        if (this.isPlayer) {
+          MB.FX.text(this.x, -this.y - 140, '冷却中', { color: '#7f8b98', size: 13 });
+          MB.FX.ring(this.x, -this.y - 55, 26, 40, { color: '#5a6470', life: 0.22, width: 1.2, squash: 1.1 });
+        }
+        return false;
       }
-      this.guarding = true;
-      this.parryHeld = true;
-      this.guardHeldT = 0;
-      this.guardLinger = 0;
-      this.guardMax = this.isPlayer ? 2.0 : 0.62;   // 举盾最长 2 秒
-      if (this.parryCd <= 0) {
-        // 完美防反有代价：玩家 3 秒（识破 1.7），敌人 2.8 秒
-        this.parryCd = this.isPlayer ? (this.status.insight > 0 ? 1.7 : 3.0) : 2.8;
-        this.parryCdMax = this.isPlayer ? (this.status.insight > 0 ? 1.7 : 3.0) : 0;
-        this.parryTimer = this.battle.parryWindow;
-        MB.FX.ring(this.x, -this.y - 55, 6, 50, { color: '#cbb4ff', life: 0.3, width: 2, squash: 1.1 });
-        if (this.isPlayer) MB.Sound.ui();
-      } else if (this.isPlayer) {
-        MB.FX.ring(this.x, -this.y - 55, 4, 30, { color: '#5a6470', life: 0.24, width: 1.2, squash: 1.1 });
-      }
-      if (this.state !== 'guard') this.setState('guard');
+      if (this.state === 'hurt') { this.bufferedGuard = 0.3; return false; }
+      if (this.state === 'stagger' || this.state === 'bound') return false;
+      // 可以随时打断自己的普攻
+      this.act = null;
+      this.buffered = null;
+      this.state = 'parry';
+      this.stateT = 0;
+      this.parryActive = 1.5;
+      this.parryElapsed = 0;
+      this.parryPerfect = this.isPlayer ? this.battle.perfectWindow : 0.16;
+      this.parryCd = this.isPlayer
+        ? (this.status.insight > 0 ? 2.0 : 3.0)
+        : 2.8;
+      this.parryCdMax = this.parryCd;
+      MB.Sound.ui();
+      MB.FX.ring(this.x, -this.y - 55, 8, 54, { color: '#d8c8ff', life: 0.26, width: 2, squash: 1.1 });
+      return true;
     }
-    endGuard(force) {
-      this.bufferedGuard = 0;
-      // 轻点也能维持一小段格挡，和长按一致
-      if (!force && this.guardHeldT < 0.22 && this.guarding) {
-        this.guardLinger = 0.3;
-        return;
-      }
-      this.parryHeld = false;
-      this.parryTimer = 0;
-      if (this.state === 'guard') this.setState('idle');
-      this.guarding = false;
-      this.guardLinger = 0;
-    }
+    startGuard() { return this.startParry(); }
+    endGuard() { this.parryActive = 0; if (this.state === 'parry') this.resetState('idle'); }
 
     useSkill(i) {
       if (this.dead || !this.canAct()) return false;
@@ -565,30 +550,11 @@
         }
         return;
       }
-      const blockable = !def.unblockable;
-      if (blockable && this.parryTimer > 0) {
-        this.battle.perfectParry(this, attacker, def);
-        return;
-      }
-      if (blockable && this.guarding && this.state === 'guard') {
-        this.blockHit(attacker, def);
+      if (!def.unblockable && this.parryActive > 0) {
+        this.battle.resolveParry(this, attacker, def);
         return;
       }
       this.takeHit(attacker, def, idx);
-    }
-
-    blockHit(attacker, def) {
-      const chip = def.dmg * 0.08 * this.battle.diff.enemyDmg;
-      this.hp = Math.max(1, this.hp - chip);
-      this.posture -= def.posture * 0.72;
-      this.postureDelay = 0.8;
-      this.vx += attacker.facing * (def.kb || 100) * 0.42;
-      this.flash = 0.45;
-      this.setState('guard');
-      this.battle.onBlock(this, attacker, def);
-      if (this.posture <= 0) { this.posture = 0; this.guardBreak(); }
-      this.ult = Math.min(100, this.ult + 3);
-      attacker.ult = Math.min(100, attacker.ult + 4);
     }
 
     guardBreak() {
@@ -697,8 +663,33 @@
       }
       MB.Skeleton.draw(ctx, this);
 
-      // 格挡护盾
-      if (!reflection && this.state === 'guard' && this.guarding) {
+      // 防反姿态
+      if (!reflection && this.state === 'parry' && this.parryActive > 0) {
+        const k = U.clamp(this.parryActive / 1.5, 0, 1);
+        const inPerfect = this.parryElapsed <= this.parryPerfect;
+        const cx = this.x + this.facing * 24, cy = -this.y - 58;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.translate(cx, cy);
+        ctx.scale(this.facing, 1);
+        for (let i = 0; i < 3; i++) {
+          ctx.globalAlpha = (inPerfect ? 0.75 : 0.4) - i * 0.1;
+          ctx.strokeStyle = i === 0 ? '#ffffff' : (inPerfect ? '#ffe9a8' : '#b9a8ff');
+          ctx.lineWidth = inPerfect ? 2.6 : 1.8;
+          ctx.beginPath();
+          ctx.arc(0, 0, 34 + i * 7 + (1 - k) * 10, -1.25, 1.25);
+          ctx.stroke();
+        }
+        // 剩余时间弧
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = inPerfect ? '#ffe9a8' : '#8fd8ff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 52, -Math.PI / 2, -Math.PI / 2 + U.TAU * k);
+        ctx.stroke();
+        ctx.restore();
+      }
+      if (!reflection && false) {
         const t = performance.now() * 0.004;
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
