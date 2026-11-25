@@ -9,7 +9,7 @@
   const TAU = U.TAU;
 
   const GRAV = 2150;
-  const ARENA = 560;
+  const ARENA = 920;
 
   class Fighter {
     constructor(battle, char, side) {
@@ -33,7 +33,8 @@
       this.act = null; this.actT = 0; this.chainIdx = 0; this.chainT = 0;
       this.strikes = []; this.strikeI = 0;
       this.moveDir = 0;
-      this.guarding = false; this.parryTimer = 0; this.parryCd = 0;
+      this.guarding = false; this.parryTimer = 0; this.parryCd = 0; this.parryCdMax = 3;
+      this.guardHeldT = 0; this.guardLinger = 0; this.counterParry = 0;
       this.dashInv = 0; this.dashT = 0; this.dashCd = 0; this.airDash = 1;
       this.invulnT = 0; this.armorT = 0;
       this.hurtT = 0; this.staggered = false;
@@ -148,6 +149,7 @@
       this.flash = Math.max(0, this.flash - dt * 4);
       this.dashCd = Math.max(0, this.dashCd - dt);
       this.parryCd = Math.max(0, this.parryCd - dt);
+      this.counterParry = Math.max(0, this.counterParry - dt);
       this.dashInv = Math.max(0, this.dashInv - dt);
       this.invulnT = Math.max(0, this.invulnT - dt);
       this.armorT = Math.max(0, this.armorT - dt);
@@ -216,7 +218,7 @@
           this.runPhase += dt * (5.5 + sp * 0.028);
           if (this.airborne) { this.resetState('air'); break; }
           if (this.moveDir !== 0 && !(this.status.root > 0)) {
-            this.vx = U.approach(this.vx, this.moveDir * 336 * this.speedMul, 2400 * dt);
+            this.vx = U.approach(this.vx, this.moveDir * 392 * this.speedMul, 2600 * dt);
             if (this.state !== 'run') this.setState('run');
           } else {
             this.vx = U.approach(this.vx, 0, 2600 * dt);
@@ -226,7 +228,7 @@
         }
         case 'air': {
           if (this.airborne) {
-            this.vx = U.approach(this.vx, this.moveDir * 300 * this.speedMul, 900 * dt);
+            this.vx = U.approach(this.vx, this.moveDir * 340 * this.speedMul, 950 * dt);
             if (this.y <= 0) this.resetState('idle');
           }
           break;
@@ -247,9 +249,14 @@
           break;
         }
         case 'guard': {
-          this.vx = U.approach(this.vx, this.moveDir * 110, 2200 * dt);
+          this.vx = U.approach(this.vx, this.moveDir * 100, 2200 * dt);
           if (this.moveDir) this.runPhase += dt * 4;
-          if (this.parryTimer <= 0 && !this.parryHeld) this.guarding = false;
+          if (this.parryHeld) this.guardHeldT += dt;
+          if (this.guardLinger > 0) {
+            this.guardLinger -= dt;
+            if (this.guardLinger <= 0) { this.parryHeld = false; this.parryTimer = 0; this.guarding = false; this.resetState('idle'); }
+          }
+          if (!this.parryHeld && this.guardLinger <= 0) this.guarding = false;
           break;
         }
         case 'hurt': {
@@ -478,15 +485,28 @@
       }
       this.guarding = true;
       this.parryHeld = true;
+      this.guardHeldT = 0;
+      this.guardLinger = 0;
       if (this.parryCd <= 0) {
+        // 敌人完美窗口永远可用；玩家有代价（3 秒），识破可缩短
+        if (this.isPlayer) this.parryCd = this.status.insight > 0 ? 1.7 : 3.0;
+        this.parryCdMax = this.isPlayer ? (this.status.insight > 0 ? 1.7 : 3.0) : 0;
         this.parryTimer = this.battle.parryWindow;
-        this.parryCd = 0.34;
-        MB.FX.ring(this.x, -this.y - 55, 6, 44, { color: '#cbb4ff', life: 0.26, width: 1.6, squash: 1.1 });
+        MB.FX.ring(this.x, -this.y - 55, 6, 50, { color: '#cbb4ff', life: 0.3, width: 2, squash: 1.1 });
+        if (this.isPlayer) MB.Sound.ui();
+      } else if (this.isPlayer) {
+        // 冷却中：只能普通格挡
+        MB.FX.ring(this.x, -this.y - 55, 4, 30, { color: '#5a6470', life: 0.24, width: 1.2, squash: 1.1 });
       }
       if (this.state !== 'guard') this.setState('guard');
     }
     endGuard() {
       this.bufferedGuard = 0;
+      // 轻点也能维持一小段格挡，和长按一致
+      if (this.guardHeldT < 0.22 && this.guarding) {
+        this.guardLinger = 0.3;
+        return;
+      }
       this.parryHeld = false;
       this.parryTimer = 0;
       if (this.state === 'guard') this.setState('idle');
@@ -522,6 +542,12 @@
     receiveHit(attacker, def, idx) {
       if (this.dead) return;
       if (this.status.invuln > 0 || this.invulnT > 0) return;
+      // 完美防反也可以被完美防反（镜返）
+      if (this.counterParry > 0 && attacker && attacker.isPlayer && !def.unblockable) {
+        this.counterParry = 0;
+        this.battle.counterParry(this, attacker, def);
+        return;
+      }
       // 闪避无敌帧
       if (this.dashInv > 0) {
         if (!this._dodgeCounted) {
