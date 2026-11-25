@@ -76,7 +76,10 @@
     }
     press(a) {
       if (!this.enabled) return;
-      if (!this.down[a]) { this.pressed[a] = true; this.time[a] = 0; }
+      if (!this.down[a]) {
+        this.pressed[a] = true; this.time[a] = 0;
+        if (this.onPress) { try { this.onPress(a); } catch (e) { console.error(e); } }
+      }
       this.down[a] = true;
     }
     release(a) {
@@ -418,10 +421,11 @@
     }
     resize(w, h) { this.w = w; this.h = h; this.fit(); }
     fit() {
-      const narrow = this.w < 700;
-      this.viewW = narrow ? 470 : 840;
-      const s = Math.min(this.w / this.viewW, this.h / (narrow ? 520 : 470));
-      this.baseZoom = U.clamp(s, 0.5, 2.1);
+      // 战场视野：横屏优先，保证左右有足够的活动空间
+      const landscape = this.w > this.h;
+      const vw = landscape ? 1080 : 660;
+      const s = Math.min(this.w / vw, this.h / (landscape ? 430 : 620));
+      this.baseZoom = U.clamp(s, 0.42, 2.2);
     }
     follow(x, y, zoom = 1, lag = 6) {
       this.tx = x; this.ty = y; this.tz = this.baseZoom * zoom;
