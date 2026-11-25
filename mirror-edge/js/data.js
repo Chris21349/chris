@@ -146,7 +146,7 @@
   /* ───────── 敌人 ───────── */
   MB.ENEMIES = {
     dummy: {
-      id: 'dummy', name: '木人·初', title: '试刃', hp: 820, posture: 85, scale: 1.18,
+      id: 'dummy', name: '木人·初', title: '试刃', hp: 820, posture: 85, scale: 1.18, bulk: 1.0,
       theme: MB.THEMES.ash, style: 'mask', weaponType: 'katana', weaponLen: 58,
       ai: { aggro: 0.32, react: 0.5, block: 0.05, dodge: 0.03, feint: 0, spacing: 110, combo: 0.1, speed: 0.8 },
       attacks: [
@@ -155,7 +155,7 @@
       dialogue: ['……木人无言。它只是站在那里，等你挥出第一刀。'],
     },
     ash: {
-      id: 'ash', name: '影卫·灰', title: '守门人', hp: 1250, posture: 110, scale: 1.24,
+      id: 'ash', name: '影卫·灰', title: '守门人', hp: 1250, posture: 110, scale: 1.24, bulk: 1.1,
       theme: MB.THEMES.ash, style: 'crest', weaponType: 'katana', weaponLen: 64,
       ai: { aggro: 0.6, react: 0.3, block: 0.4, dodge: 0.12, feint: 0.05, spacing: 120, combo: 0.45, speed: 1 },
       attacks: [
@@ -167,7 +167,7 @@
       dialogue: ['影卫不说话。他抬起刀，像抬起一段旧账。'],
     },
     crimson: {
-      id: 'crimson', name: '双刃·绯', title: '疾影', hp: 1350, posture: 95, scale: 1.14,
+      id: 'crimson', name: '双刃·绯', title: '疾影', hp: 1350, posture: 95, scale: 1.12, bulk: 0.9,
       theme: MB.THEMES.crimson, style: 'horn', weaponType: 'katana', weaponLen: 54,
       twin: true,
       ai: { aggro: 0.85, react: 0.2, block: 0.15, dodge: 0.3, feint: 0.1, spacing: 105, combo: 0.8, speed: 1.08 },
@@ -181,7 +181,7 @@
       dialogue: ['「你挡得住第一刀。」绯笑了，「第二刀呢？」'],
     },
     stone: {
-      id: 'stone', name: '重锤·岳', title: '不动', hp: 2100, posture: 150, scale: 1.46,
+      id: 'stone', name: '重锤·岳', title: '不动', hp: 2100, posture: 150, scale: 1.42, bulk: 1.3,
       theme: MB.THEMES.stone, style: 'horn', weaponType: 'hammer', weaponLen: 74,
       ai: { aggro: 0.55, react: 0.42, block: 0.3, dodge: 0.05, feint: 0.08, spacing: 140, combo: 0.2, speed: 0.92 },
       attacks: [
@@ -192,7 +192,7 @@
       dialogue: ['山岳挪动半步，大地便先一步颤动。'],
     },
     mirror: {
-      id: 'mirror', name: '镜我', title: '另一个你', hp: 2300, posture: 120, scale: 1.2,
+      id: 'mirror', name: '镜我', title: '另一个你', hp: 2300, posture: 120, scale: 1.2, bulk: 1.02,
       theme: MB.THEMES.mirror, style: 'mask', weaponType: 'katana', weaponLen: 62,
       skills: ['voidslash', 'mirrorstep', 'bladerain', 'chrono'],
       canParry: true,
@@ -205,7 +205,7 @@
       dialogue: ['「你练了多久的防反？」镜我歪头，「我可是你。」'],
     },
     void: {
-      id: 'void', name: '终焉·无相', title: '镜之尽头', hp: 3200, posture: 160, scale: 1.3,
+      id: 'void', name: '终焉·无相', title: '镜之尽头', hp: 3200, posture: 160, scale: 1.28, bulk: 1.12,
       theme: MB.THEMES.void, style: 'crest', weaponType: 'katana', weaponLen: 70,
       skills: ['bladerain', 'gravity', 'chrono', 'domain'],
       canParry: true,
