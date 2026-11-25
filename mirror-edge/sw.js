@@ -1,7 +1,7 @@
 /* 镜刃 MIRROR EDGE — Service Worker
    策略：导航与脚本/样式一律「网络优先」，断网才回落到缓存。
    这样只要联网，刷新/重开就一定拿到最新版本，不会再出现旧代码卡住的情况。 */
-const V = 'mirror-edge-v1.3.2';
+const V = 'mirror-edge-v1.3.3';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 function withTimeout(promise, ms) {
