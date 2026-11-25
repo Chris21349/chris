@@ -13,7 +13,7 @@
       v: 1,
       skills: ['voidslash', 'mirrorstep', 'ironwall', 'insight'],
       parry: ['condemn'],
-      loadout: ['voidslash', 'mirrorstep', 'ironwall', 'insight'],
+      loadout: ['voidslash', 'mirrorstep', 'ironwall'],
       parryStyle: 'condemn',
       cleared: {},
       stats: { perfect: 0, dodges: 0, kills: 0, maxCombo: 0, guardBreaks: 0, battles: 0 },
@@ -30,8 +30,8 @@
       const d = defaultSave();
       s.skills = Array.isArray(s.skills) ? s.skills : d.skills;
       s.parry = Array.isArray(s.parry) ? s.parry : d.parry;
-      s.loadout = Array.isArray(s.loadout) ? s.loadout : d.loadout;
-      while (s.loadout.length < 4) s.loadout.push(null);
+      s.loadout = Array.isArray(s.loadout) ? s.loadout.slice(0, 3) : d.loadout.slice();
+      while (s.loadout.length < 3) s.loadout.push(null);
       s.cleared = s.cleared || {};
       s.stats = Object.assign({}, d.stats, s.stats);
       s.achv = s.achv || {};
@@ -89,10 +89,10 @@
       }
     }
     // 自动补位
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 3; i++) {
       if (!s.loadout[i] || !s.skills.includes(s.loadout[i])) s.loadout[i] = null;
     }
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 3; i++) {
       if (s.loadout[i]) continue;
       const free = s.skills.find((id) => !s.loadout.includes(id));
       if (free) s.loadout[i] = free;
@@ -116,11 +116,30 @@
     MB.Camera.resize(Game.w, Game.h);
   }
 
+  Game.applyLayout = function () {
+    const touch = !!Game.isTouch;
+    document.body.classList.toggle('touch-ui', touch);
+    document.body.classList.toggle('landscape', window.innerWidth > window.innerHeight);
+    const rot = document.getElementById('rotate');
+    if (rot) {
+      const portrait = window.innerHeight > window.innerWidth;
+      rot.classList.toggle('on', !!(touch && portrait && !MB.UI.rotDismissed));
+    }
+  };
+
   Game.init = function () {
     resize();
-    window.addEventListener('resize', resize);
-    window.addEventListener('orientationchange', () => setTimeout(resize, 120));
+    window.addEventListener('resize', () => { resize(); Game.applyLayout(); });
+    window.addEventListener('orientationchange', () => setTimeout(() => { resize(); Game.applyLayout(); }, 150));
     MB.UI.init();
+    Game.applyLayout();
+    // 按下即生效：防反 0 帧响应
+    MB.Input.onPress = (a) => {
+      if (a !== 'guard') return;
+      if (Game.scene !== 'battle' || !Game.battle || Game.paused || Game.battle.over) return;
+      if (Game.battle.intro > 0) return;
+      Game.battle.player.startGuard();
+    };
     MB.Sound.init();
     MB.Sound.setMusic(MB.SAVE.settings.music / 100);
     MB.Sound.setSfx(MB.SAVE.settings.sfx / 100);
@@ -288,8 +307,8 @@
     const s = MB.SAVE;
     if (!MB.UI.stageUnlocked(stageIdx)) { MB.UI.toast('先击破上一关'); return; }
     // 应用装配
-    const skills = (s.loadout || []).filter((id) => id && s.skills.includes(id));
-    while (skills.length < 4) skills.push(null);
+    const skills = (s.loadout || []).filter((id) => id && s.skills.includes(id)).slice(0, 3);
+    while (skills.length < 3) skills.push(null);
     MB.PLAYER.skills = skills;
     MB.PLAYER.parryStyle = s.parry.includes(s.parryStyle) ? s.parryStyle : 'condemn';
     MB.Sound.init();
