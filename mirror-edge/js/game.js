@@ -45,7 +45,7 @@
   }
 
   MB.SAVE = loadSave();
-  MB.VERSION = 'v1.3.2';
+  MB.VERSION = 'v1.3.3';
   const vt = document.getElementById('verTag');
   if (vt) vt.textContent = MB.VERSION;
 
