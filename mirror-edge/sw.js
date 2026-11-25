@@ -1,5 +1,5 @@
 /* 镜刃 MIRROR EDGE — Service Worker */
-const V = 'mirror-edge-v1.2.1';
+const V = 'mirror-edge-v1.2.2';
 const SHELL = [
   './',
   './index.html',
