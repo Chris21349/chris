@@ -5,7 +5,7 @@
 (() => {
 'use strict';
 
-const VERSION = '7.0.0';
+const VERSION = '7.1.0';
 const STORAGE_KEY = 'soul-lantern:v1:save';
 const LEGACY_KEY = 'soul-lantern-save-v1';
 
@@ -129,20 +129,27 @@ const Sound = (() => {
     s.connect(f); f.connect(g); g.connect(master);
     s.start(t0); s.stop(t0 + dur + 0.05);
   }
+  const LAST = {};
+  function ok(key, ms) {
+    const now = performance.now();
+    if (LAST[key] && now - LAST[key] < ms) return false;
+    LAST[key] = now;
+    return true;
+  }
   return {
     unlock() { if (ensure()) resume(); },
-    hit() { noise(0.07, { freq: 1500, to: 500, gain: 0.10, q: 0.7 }); },
-    crit() { tone(880, 0.09, { type: 'triangle', to: 1500, gain: 0.14 }); noise(0.05, { freq: 2600, gain: 0.07 }); },
-    kill() { noise(0.13, { freq: 700, to: 180, gain: 0.10, q: 0.8 }); },
-    pickup() { tone(1200, 0.06, { type: 'sine', to: 1700, gain: 0.05 }); },
+    hit() { if (!ok('hit', 60)) return; noise(0.07, { freq: 1500, to: 500, gain: 0.10, q: 0.7 }); },
+    crit() { if (!ok('crit', 90)) return; tone(880, 0.09, { type: 'triangle', to: 1500, gain: 0.14 }); noise(0.05, { freq: 2600, gain: 0.07 }); },
+    kill() { if (!ok('kill', 70)) return; noise(0.13, { freq: 700, to: 180, gain: 0.10, q: 0.8 }); },
+    pickup() { if (!ok('pickup', 45)) return; tone(1200, 0.06, { type: 'sine', to: 1700, gain: 0.05 }); },
     levelup() {
       [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.5, { type: 'triangle', gain: 0.10, delay: i * 0.07 }));
     },
     hurt() { tone(190, 0.22, { type: 'sawtooth', to: 70, gain: 0.18, filter: 'lowpass', freq: 900 }); },
-    sword() { noise(0.11, { freq: 2400, to: 700, gain: 0.08, q: 1.6 }); },
-    talisman() { tone(520, 0.12, { type: 'triangle', to: 900, gain: 0.07 }); },
-    bell() { tone(660, 0.9, { type: 'sine', gain: 0.11 }); tone(990, 0.7, { type: 'sine', gain: 0.06, delay: 0.01 }); },
-    boom() { noise(0.28, { freq: 380, to: 60, gain: 0.16, q: 0.6 }); },
+    sword() { if (!ok('sword', 90)) return; noise(0.11, { freq: 2400, to: 700, gain: 0.08, q: 1.6 }); },
+    talisman() { if (!ok('tal', 90)) return; tone(520, 0.12, { type: 'triangle', to: 900, gain: 0.07 }); },
+    bell() { if (!ok('bell', 260)) return; tone(660, 0.9, { type: 'sine', gain: 0.11 }); tone(990, 0.7, { type: 'sine', gain: 0.06, delay: 0.01 }); },
+    boom() { if (!ok('boom', 110)) return; noise(0.28, { freq: 380, to: 60, gain: 0.16, q: 0.6 }); },
     boss() { tone(70, 1.3, { type: 'sawtooth', gain: 0.16, filter: 'lowpass', freq: 420 }); noise(1.0, { freq: 200, to: 60, gain: 0.10 }); },
     over() { [330, 262, 196, 147].forEach((f, i) => tone(f, 1.1, { type: 'triangle', gain: 0.12, delay: i * 0.18 })); },
     ui() { tone(880, 0.05, { type: 'sine', gain: 0.05 }); }
@@ -156,34 +163,75 @@ function haptic(ms = 12) {
 }
 
 /* ───────────────────────── 画布 ───────────────────────── */
-const cv = document.getElementById('cv');
-const ctx = cv.getContext('2d', { alpha: false });
+let cv = document.getElementById('cv');
+let ctx = cv.getContext('2d', { alpha: false });
 const VIEW = { w: 0, h: 0, dpr: 1 };
+
+// 画布自愈：移动端（尤其 iOS）后台回来/内存紧张时 2D 上下文会失效，
+// 表现为整屏黑且换局也无法恢复，必须重建 canvas 元素。
+function resetCanvas() {
+  try {
+    const old = cv;
+    const fresh = document.createElement('canvas');
+    fresh.id = 'cv';
+    fresh.style.cssText = old.style.cssText;
+    old.parentNode.replaceChild(fresh, old);
+    cv = fresh;
+    ctx = cv.getContext('2d', { alpha: false });
+    VIEW.w = 0; VIEW.h = 0; VIEW.dpr = 0;
+    bindCanvasEvents();
+    resize();
+    lastT = 0;
+    render(performance.now() / 1000);
+    try { toast('画面已重建'); } catch (err) { }
+  } catch (e) {
+    console.error('resetCanvas failed', e);
+  }
+}
+
+function bindCanvasEvents() {
+  cv.addEventListener('contextlost', e => { e.preventDefault(); }, false);
+  cv.addEventListener('contextrestored', () => { lastT = 0; resize(); });
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+}
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
+  if (w < 120 || h < 200) return;   // 移动端可能瞬间返回 0，忽略避免画布变 0
+  if (Math.abs(w - VIEW.w) < 2 && Math.abs(h - VIEW.h) < 2 && VIEW.dpr === Math.min(2, window.devicePixelRatio || 1)) return;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   VIEW.w = w; VIEW.h = h; VIEW.dpr = dpr;
   cv.width = Math.floor(w * dpr);
   cv.height = Math.floor(h * dpr);
   cv.style.width = w + 'px';
   cv.style.height = h + 'px';
+  if (!ctx) ctx = cv.getContext('2d', { alpha: false });
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   buildBackdrop();
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 120));
+bindCanvasEvents();
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    lastT = 0;
+    resetCanvas();
+    requestAnimationFrame(frame);
+  }
+});
+window.addEventListener('pageshow', e => { if (e.persisted) resetCanvas(); });
+window.addEventListener('pagehide', () => { G.leftAt = Date.now(); });
 
 /* ───────────────────────── 输入 ───────────────────────── */
 const IN = { on: false, ox: 0, oy: 0, cx: 0, cy: 0, dx: 0, dy: 0, mag: 0, id: -1, key: { x: 0, y: 0 } };
 const KEY = Object.create(null);
 
 function setupInput() {
-  const el = document.getElementById('app-layer') || document.body;
-  const target = cv;
+  const target = document;
 
   target.addEventListener('pointerdown', e => {
     if (G.mode !== 'play' && G.mode !== 'tutorial') return;
+    if (e.target && e.target.closest && e.target.closest('.screen, #hud, #tutBar')) return;
     if (IN.on) return;
     IN.on = true; IN.id = e.pointerId;
     IN.ox = e.clientX; IN.oy = e.clientY;
@@ -478,6 +526,7 @@ function spawnEnemy(typeKey, opt = {}) {
 
 /* ───────────────────────── 特效 ───────────────────────── */
 function burst(x, y, n, col, opt = {}) {
+  if (lowQ()) n = Math.max(2, Math.ceil(n / 2));
   const spd = opt.spd || 160, size = opt.size || 3, life = opt.life || 0.5;
   for (let i = 0; i < n; i++) {
     const a = rnd(TAU), s = rnd(spd, spd * 0.25);
@@ -490,6 +539,7 @@ function burst(x, y, n, col, opt = {}) {
   if (G.parts.length > 460) G.parts.splice(0, G.parts.length - 460);
 }
 function inkSplat(x, y, n, col) {
+  if (lowQ()) n = Math.max(2, Math.ceil(n / 2));
   for (let i = 0; i < n; i++) {
     const a = rnd(TAU), s = rnd(120, 20);
     G.parts.push({
@@ -1416,7 +1466,7 @@ function updateEnemies(dt) {
   }
 
   // 清理
-  if (G.enemies.length > 0) G.enemies = G.enemies.filter(e => e.alive || e.dying < 0.8);
+  if (G.enemies.length > 0) compact(G.enemies, e => e.alive || e.dying < 0.8);
 }
 
 function updateBoss(e, dt, ux, uy, d) {
@@ -1668,7 +1718,7 @@ function updateShots(dt) {
     }
   }
 
-  G.shots = G.shots.filter(s => s.alive !== false && s.life > 0);
+  compact(G.shots, s => s.alive !== false && s.life > 0);
 }
 
 function updateOrbs(dt) {
@@ -1699,7 +1749,7 @@ function updateOrbs(dt) {
       }
     }
   }
-  G.orbs = G.orbs.filter(o => o.alive);
+  compact(G.orbs, o => o.alive);
   if (G.orbs.length > 400) G.orbs.splice(0, G.orbs.length - 400);
 }
 
@@ -1805,25 +1855,25 @@ function updateWorld(dt) {
     pt.vy -= pt.vy * pt.drag * dt;
     pt.vy += (pt.grav || 0) * dt;
   }
-  G.parts = G.parts.filter(p => p.life > 0);
+  compact(G.parts, p => p.life > 0);
 
   for (const tx of G.texts) { tx.life -= dt; tx.y += tx.vy * dt; tx.vy += 70 * dt; }
-  G.texts = G.texts.filter(t => t.life > 0);
+  compact(G.texts, t => t.life > 0);
 
   for (const r of G.rings) { r.life -= dt; r.r = r.rMax * easeOut(1 - r.life / r.max); }
-  G.rings = G.rings.filter(r => r.life > 0);
+  compact(G.rings, r => r.life > 0);
 
   for (const s of G.slashes) s.life -= dt;
-  G.slashes = G.slashes.filter(s => s.life > 0);
+  compact(G.slashes, s => s.life > 0);
 
   for (const a of G.arcs) a.life -= dt;
-  G.arcs = G.arcs.filter(a => a.life > 0);
+  compact(G.arcs, a => a.life > 0);
 
   for (const c of G.cones) c.life -= dt;
-  G.cones = G.cones.filter(c => c.life > 0);
+  compact(G.cones, c => c.life > 0);
 
   for (const b of G.bladeFx) b.life -= dt;
-  G.bladeFx = G.bladeFx.filter(b => b.life > 0);
+  compact(G.bladeFx, b => b.life > 0);
 
   for (const b of G.blades) {
     b.life -= dt;
@@ -1842,18 +1892,18 @@ function updateWorld(dt) {
       G.parts.push({ x: b.x + ca * rnd(b.len), y: b.y + sa * rnd(b.len), vx: rnd(30, -30), vy: rnd(30, -30), life: 0.5, max: 0.5, size: 3, col: '#dceeff', type: 'spark', drag: 2 });
     }
   }
-  G.blades = G.blades.filter(b => b.life > 0);
+  compact(G.blades, b => b.life > 0);
 
   for (const sr of G.sealRings) { sr.life -= dt; sr.r = sr.rMax * (1 - sr.life / sr.max); }
-  G.sealRings = G.sealRings.filter(sr => sr.life > 0);
+  compact(G.sealRings, sr => sr.life > 0);
 
   for (const b of G.beams) b.life -= dt;
-  G.beams = G.beams.filter(b => b.life > 0);
+  compact(G.beams, b => b.life > 0);
   for (const r of G.ringFx) r.life -= dt;
-  G.ringFx = G.ringFx.filter(r => r.life > 0);
+  compact(G.ringFx, r => r.life > 0);
 
   for (const c of G.cones) c.life -= dt;
-  G.cones = G.cones.filter(c => c.life > 0);
+  compact(G.cones, c => c.life > 0);
 
   for (const b of G.blades) {
     b.life -= dt;
@@ -1872,15 +1922,15 @@ function updateWorld(dt) {
       G.parts.push({ x: b.x + ca * rnd(b.len), y: b.y + sa * rnd(b.len), vx: rnd(30, -30), vy: rnd(30, -30), life: 0.5, max: 0.5, size: 3, col: '#dceeff', type: 'spark', drag: 2 });
     }
   }
-  G.blades = G.blades.filter(b => b.life > 0);
+  compact(G.blades, b => b.life > 0);
 
   for (const sr of G.sealRings) { sr.life -= dt; sr.r = sr.rMax * (1 - sr.life / sr.max); }
-  G.sealRings = G.sealRings.filter(sr => sr.life > 0);
+  compact(G.sealRings, sr => sr.life > 0);
 
   for (const b of G.beams) b.life -= dt;
-  G.beams = G.beams.filter(b => b.life > 0);
+  compact(G.beams, b => b.life > 0);
   for (const r of G.ringFx) r.life -= dt;
-  G.ringFx = G.ringFx.filter(r => r.life > 0);
+  compact(G.ringFx, r => r.life > 0);
 
   for (const sd of G.seals) {
     sd.t += dt;
@@ -1913,6 +1963,10 @@ function frame(now) {
   let dt = (now - lastT) / 1000;
   lastT = now;
   if (dt > 0.25) dt = 0.25;
+  if (dt > 0.0005) {
+    const inst = 1 / dt;
+    G.fpsAvg = G.fpsAvg ? G.fpsAvg * 0.92 + inst * 0.08 : inst;
+  }
   if (window.__SL && window.__SL.timeScale) dt *= window.__SL.timeScale;
 
   if (G.mode === 'play' || G.mode === 'tutorial') {
@@ -1928,15 +1982,59 @@ function frame(now) {
       // 冻结
     }
   }
+  G.lastFrameAt = now;
   try {
     render(now / 1000);
-    syncHUD();
+    G.renderFail = 0;
   } catch (err) {
+    G.renderFail = (G.renderFail || 0) + 1;
     if (window.__SL) {
       window.__SL.errs = window.__SL.errs || [];
       if (window.__SL.errs.length < 8) window.__SL.errs.push(String(err && err.stack || err));
     }
+    // 连续失败时切到极简渲染，保证画面不卡死
+    if (G.renderFail > 2) {
+      try { renderLite(now / 1000); } catch (e2) { }
+    }
   }
+  try { syncHUD(); } catch (e3) { }
+}
+
+function lowQ() { return (G.fpsAvg || 60) < 42; }
+
+// 原地压缩数组，避免每帧 filter 产生垃圾
+function compact(arr, keep) {
+  let w = 0;
+  for (let i = 0; i < arr.length; i++) {
+    const v = arr[i];
+    if (keep(v)) arr[w++] = v;
+  }
+  arr.length = w;
+}
+
+/* ───────────────────────── 辉光精灵缓存（移动端性能） ───────────────────────── */
+const GLOW_CACHE = {};
+function glowSprite(rgb) {
+  let c = GLOW_CACHE[rgb];
+  if (c) return c;
+  c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  const g2 = c.getContext('2d');
+  const gr = g2.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, `rgba(${rgb},0.95)`);
+  gr.addColorStop(0.35, `rgba(${rgb},0.55)`);
+  gr.addColorStop(0.7, `rgba(${rgb},0.18)`);
+  gr.addColorStop(1, `rgba(${rgb},0)`);
+  g2.fillStyle = gr;
+  g2.fillRect(0, 0, 64, 64);
+  GLOW_CACHE[rgb] = c;
+  return c;
+}
+function drawGlow(x, y, r, rgb, alpha) {
+  const sp = glowSprite(rgb);
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(sp, x - r, y - r, r * 2, r * 2);
+  ctx.globalAlpha = 1;
 }
 
 /* ───────────────────────── 背景 ───────────────────────── */
@@ -2000,13 +2098,8 @@ function drawBackground(t, camX, camY) {
     const x = ((seed * 13 + drift - camX * 0.18) % (w + 460) + w + 460) % (w + 460) - 230;
     const y = h * (0.2 + hash2(i, 3) * 0.6) - camY * 0.1 + Math.sin(t * 0.3 + i) * 16;
     const r = 200 + hash2(i, 9) * 180;
-    const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
     const a = 0.05 + hash2(i, 5) * 0.04;
-    rg.addColorStop(0, `rgba(72,104,128,${a})`);
-    rg.addColorStop(0.6, `rgba(40,60,80,${a * 0.5})`);
-    rg.addColorStop(1, 'rgba(20,30,45,0)');
-    ctx.fillStyle = rg;
-    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    drawGlow(x, y, r, '72,104,128', a * 6);
   }
 }
 
@@ -2057,22 +2150,13 @@ function drawOrbs(t) {
     if (o.oil) {
       ctx.save();
       ctx.translate(o.x, o.y + Math.sin(t * 3 + o.x) * 2);
-      const rg = ctx.createRadialGradient(0, 0, 0, 0, 0, 16);
-      rg.addColorStop(0, 'rgba(127,224,188,0.85)');
-      rg.addColorStop(1, 'rgba(127,224,188,0)');
-      ctx.fillStyle = rg;
-      ctx.beginPath(); ctx.arc(0, 0, 16, 0, TAU); ctx.fill();
+      drawGlow(0, 0, 16, '127,224,188', 0.9);
       ctx.fillStyle = '#d8fff2';
       ctx.beginPath(); ctx.arc(0, 0, 4.2, 0, TAU); ctx.fill();
       ctx.restore();
       continue;
     }
-    const rg = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, 13 * pulse);
-    rg.addColorStop(0, 'rgba(255,235,180,0.95)');
-    rg.addColorStop(0.35, 'rgba(240,198,116,0.55)');
-    rg.addColorStop(1, 'rgba(240,198,116,0)');
-    ctx.fillStyle = rg;
-    ctx.beginPath(); ctx.arc(o.x, o.y, 13 * pulse, 0, TAU); ctx.fill();
+    drawGlow(o.x, o.y, 14 * pulse, '240,198,116', 0.9);
     ctx.fillStyle = '#fff6d8';
     ctx.beginPath(); ctx.arc(o.x, o.y, 2.4, 0, TAU); ctx.fill();
   }
@@ -2281,6 +2365,7 @@ function drawArcs() {
   ctx.globalAlpha = 1;
 }
 
+const LOTUS_GRADS = [];
 function drawLotus(t, x, y, scale, bloom) {
   const layers = [
     { n: 12, r: 34, len: 88, wid: 26, rot: t * 0.14, cTip: '#ffcf8a', cMid: '#d63a24', cBase: '#4a0710', a: 0.88 },
@@ -2295,22 +2380,23 @@ function drawLotus(t, x, y, scale, bloom) {
   ctx.scale(scale * boost * 1.1, scale * boost * 0.86);
 
   // 背后光晕
-  const halo = ctx.createRadialGradient(0, -10, 4, 0, -10, 120);
-  halo.addColorStop(0, 'rgba(255,150,70,0.30)');
-  halo.addColorStop(0.55, 'rgba(210,60,30,0.14)');
-  halo.addColorStop(1, 'rgba(150,20,20,0)');
-  ctx.fillStyle = halo;
-  ctx.beginPath(); ctx.arc(0, -10, 120, 0, TAU); ctx.fill();
+  drawGlow(0, -10, 120, '255,150,70', 0.32);
 
-  for (const L of layers) {
+  const maxLayer = lowQ() ? 3 : layers.length;
+  for (let li = 0; li < maxLayer; li++) {
+    const L = layers[li];
+    if (!LOTUS_GRADS[li]) {
+      const gg = ctx.createLinearGradient(0, -L.r - L.len, 0, -L.r + 6);
+      gg.addColorStop(0, L.cTip);
+      gg.addColorStop(0.42, L.cMid);
+      gg.addColorStop(1, L.cBase);
+      LOTUS_GRADS[li] = gg;
+    }
+    const g = LOTUS_GRADS[li];
     for (let i = 0; i < L.n; i++) {
       const a = L.rot + i / L.n * TAU;
       ctx.save();
       ctx.rotate(a);
-      const g = ctx.createLinearGradient(0, -L.r - L.len, 0, -L.r + 6);
-      g.addColorStop(0, L.cTip);
-      g.addColorStop(0.42, L.cMid);
-      g.addColorStop(1, L.cBase);
       ctx.globalAlpha = L.a;
       ctx.fillStyle = g;
       ctx.beginPath();
@@ -2431,11 +2517,7 @@ function drawWeaponAuras(t) {
     const mut = awForm('mirror') === 'mutate';
     ctx.save();
     ctx.translate(p.x, p.y - 6);
-    const rg = ctx.createRadialGradient(0, 0, 6, 0, 0, 64);
-    rg.addColorStop(0, mut ? 'rgba(255,240,220,0.22)' : 'rgba(220,240,255,0.22)');
-    rg.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = rg;
-    ctx.beginPath(); ctx.arc(0, 0, 64, 0, TAU); ctx.fill();
+    drawGlow(0, 0, 64, mut ? '255,240,220' : '220,240,255', 0.22);
     ctx.strokeStyle = mut ? 'rgba(255,200,160,0.55)' : 'rgba(200,225,255,0.55)';
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(0, 0, 46, 0, TAU); ctx.stroke();
@@ -2523,12 +2605,7 @@ function drawAwakenFx(t) {
       const a = p.flameAng + i * TAU / n;
       const fx = p.x + Math.cos(a) * rad, fy = p.y + Math.sin(a) * rad * 0.86;
       const r = mutated ? 15 : 12;
-      const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, r * 2.6);
-      g.addColorStop(0, mutated ? 'rgba(255,240,200,0.95)' : 'rgba(255,246,220,0.95)');
-      g.addColorStop(0.35, mutated ? 'rgba(255,110,70,0.55)' : 'rgba(255,190,100,0.5)');
-      g.addColorStop(1, mutated ? 'rgba(200,30,10,0)' : 'rgba(255,150,60,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(fx, fy, r * 2.6, 0, TAU); ctx.fill();
+      drawGlow(fx, fy, r * 2.6, mutated ? '255,120,70' : '255,190,100', 0.55);
       // 焰舌（外橙内白，带抖动）
       const wob = Math.sin(t * 9 + i * 1.7) * 1.6;
       const sway = Math.cos(t * 7 + i) * 1.2;
@@ -3648,12 +3725,7 @@ function drawPlayer(p, t) {
   ctx.lineWidth = 1.6;
   ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 2); ctx.stroke();
   const lx = 0, ly = 8;
-  const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, 34);
-  lg.addColorStop(0, 'rgba(255,226,160,0.55)');
-  lg.addColorStop(0.4, 'rgba(255,170,80,0.18)');
-  lg.addColorStop(1, 'rgba(255,140,40,0)');
-  ctx.fillStyle = lg;
-  ctx.beginPath(); ctx.arc(lx, ly, 34, 0, TAU); ctx.fill();
+  drawGlow(lx, ly, 34, '255,190,110', 0.6);
   // 灯罩
   ctx.fillStyle = 'rgba(32,26,20,0.95)';
   ctx.beginPath();
@@ -3822,17 +3894,16 @@ function drawJoystick() {
 function drawDarkGlow(t) {
   const camX = G.cam.x + G.shakeX, camY = G.cam.y + G.shakeY;
   ctx.globalCompositeOperation = 'lighter';
+  const skipGlow = lowQ();
+  let gi = 0;
   for (const e of G.enemies) {
     if (!e.alive) continue;
+    if (skipGlow && (gi++ & 1)) continue;
     const sx = VIEW.w / 2 + (e.x - camX), sy = VIEW.h / 2 + (e.y - camY);
     if (sx < -60 || sx > VIEW.w + 60 || sy < -60 || sy > VIEW.h + 60) continue;
     const R = e.boss ? 70 : e.elite ? 30 : 12;
     const a = e.boss ? 0.16 : e.elite ? 0.10 : 0.045;
-    const gr = ctx.createRadialGradient(sx, sy, 0, sx, sy, R);
-    gr.addColorStop(0, `rgba(255,110,80,${a})`);
-    gr.addColorStop(1, 'rgba(255,90,70,0)');
-    ctx.fillStyle = gr;
-    ctx.beginPath(); ctx.arc(sx, sy, R, 0, TAU); ctx.fill();
+    drawGlow(sx, sy, R, '255,110,80', a * 4);
     // 眼
     if (!e.boss && e.type !== 'chi') {
       const er = e.elite ? 2.4 : 1.9;
@@ -3862,7 +3933,10 @@ function render(t) {
   drawWeaponAuras(t);
 
   // 按 y 排序绘制
-  const list = G.enemies.slice().sort((a, b) => a.y - b.y);
+  const list = G._sortBuf || (G._sortBuf = []);
+  list.length = 0;
+  for (const e of G.enemies) list.push(e);
+  list.sort((a, b) => a.y - b.y);
   let playerDrawn = false;
   for (const e of list) {
     if (!playerDrawn && G.player && e.y > G.player.y) {
@@ -3901,6 +3975,29 @@ function render(t) {
     ctx.fillStyle = `rgba(255,190,110,${a})`;
     ctx.fillRect(0, 0, VIEW.w, VIEW.h);
   }
+}
+
+/* ───────────────────────── 极简渲染（异常兜底） ───────────────────────── */
+function renderLite(t) {
+  ctx.fillStyle = '#07090d';
+  ctx.fillRect(0, 0, VIEW.w, VIEW.h);
+  const camX = G.cam.x, camY = G.cam.y;
+  ctx.save();
+  ctx.translate(VIEW.w / 2 - camX, VIEW.h / 2 - camY);
+  for (const e of G.enemies) {
+    if (!e.alive) continue;
+    ctx.fillStyle = e.ink;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.r, 0, TAU);
+    ctx.fill();
+  }
+  if (G.player) {
+    ctx.fillStyle = '#e8d9b0';
+    ctx.beginPath();
+    ctx.arc(G.player.x, G.player.y, 13, 0, TAU);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 /* ───────────────────────── HUD ───────────────────────── */
@@ -3976,7 +4073,15 @@ function setHUD(on) {
 function fadeTo(fn) {
   const f = $('fade');
   f.classList.add('on');
-  setTimeout(() => { fn(); f.classList.remove('on'); }, 300);
+  setTimeout(() => {
+    try { fn(); } catch (err) {
+      console.error(err);
+      const o = document.getElementById('awaken');
+      if (o) o.classList.remove('on', 'show');
+    } finally {
+      f.classList.remove('on');
+    }
+  }, 300);
 }
 
 /* ───────────────────────── 局内流程 ───────────────────────── */
@@ -4562,6 +4667,10 @@ function bindUI() {
   $('swHaptic').addEventListener('click', () => { save.settings.haptic = !save.settings.haptic; persist(); applySettingsUI(); haptic(15); });
   $('swDmg').addEventListener('click', () => { save.settings.dmg = !save.settings.dmg; persist(); applySettingsUI(); });
 
+  $('btnFixGfx').addEventListener('click', () => {
+    resetCanvas();
+    toast('画面已重建');
+  });
   $('btnExport').addEventListener('click', exportSave);
   $('btnImport').addEventListener('click', () => $('fileImport').click());
   $('fileImport').addEventListener('change', e => {
@@ -4577,6 +4686,20 @@ function bindUI() {
 }
 
 /* ───────────────────────── 启动 ───────────────────────── */
+setInterval(() => {
+  if (document.hidden) return;
+  const now = performance.now();
+  if (G.lastFrameAt && now - G.lastFrameAt > 1500) {
+    G.stalls = (G.stalls || 0) + 1;
+    lastT = 0;
+    G.lastFrameAt = now;
+    if (G.stalls >= 2) { G.stalls = 0; resetCanvas(); }
+    requestAnimationFrame(frame);
+  } else if (G.lastFrameAt && now - G.lastFrameAt < 400) {
+    G.stalls = 0;
+  }
+}, 1000);
+
 function boot() {
   resize();
   setupInput();
@@ -4597,6 +4720,7 @@ window.__SL = {
   testing: false,
   timeScale: 1,
   errs: [],
+  reset: () => resetCanvas(),
   get G() { return G; },
   get save() { return save; },
   // Android 返回键：暂停 / 继续 / 回标题
