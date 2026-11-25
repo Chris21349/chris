@@ -5,7 +5,7 @@
 (() => {
 'use strict';
 
-const VERSION = '7.1.0';
+const VERSION = '7.2.0';
 const STORAGE_KEY = 'soul-lantern:v1:save';
 const LEGACY_KEY = 'soul-lantern-save-v1';
 
@@ -186,6 +186,24 @@ function resetCanvas() {
     try { toast('画面已重建'); } catch (err) { }
   } catch (e) {
     console.error('resetCanvas failed', e);
+  }
+}
+
+function canvasAlive() {
+  try {
+    if (!ctx || !cv || cv.width < 10 || cv.height < 10) return false;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(0, 0, 2, 2);
+    const d = ctx.getImageData(0, 0, 1, 1).data;
+    // 立刻把探针像素抹成背景色，避免红点闪现
+    ctx.fillStyle = '#07090d';
+    ctx.fillRect(0, 0, 2, 2);
+    ctx.restore();
+    return d[0] > 200 && d[1] < 60 && d[2] < 60 && d[3] > 200;
+  } catch (e) {
+    return false;
   }
 }
 
@@ -4688,6 +4706,14 @@ function bindUI() {
 /* ───────────────────────── 启动 ───────────────────────── */
 setInterval(() => {
   if (document.hidden) return;
+  if (G.mode === 'play' || G.mode === 'tutorial' || G.mode === 'levelup' || G.mode === 'pause') {
+    if (!canvasAlive()) {
+      G.deadCanvas = (G.deadCanvas || 0) + 1;
+      if (G.deadCanvas >= 2) { G.deadCanvas = 0; resetCanvas(); }
+    } else {
+      G.deadCanvas = 0;
+    }
+  }
   const now = performance.now();
   if (G.lastFrameAt && now - G.lastFrameAt > 1500) {
     G.stalls = (G.stalls || 0) + 1;
