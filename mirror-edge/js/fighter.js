@@ -252,6 +252,11 @@
           this.vx = U.approach(this.vx, this.moveDir * 100, 2200 * dt);
           if (this.moveDir) this.runPhase += dt * 4;
           if (this.parryHeld) this.guardHeldT += dt;
+          if (this.parryHeld && this.guardHeldT >= (this.guardMax || 2)) {
+            this.endGuard(true);
+            this.battle.onGuardExhaust(this);
+            break;
+          }
           if (this.guardLinger > 0) {
             this.guardLinger -= dt;
             if (this.guardLinger <= 0) { this.parryHeld = false; this.parryTimer = 0; this.guarding = false; this.resetState('idle'); }
@@ -479,6 +484,8 @@
     startGuard() {
       if (this.dead || this.status.stun > 0) return;
       if (this.airborne) return;
+      // 已经在格挡中：不重置持续时间，避免无限重举
+      if (this.state === 'guard' && this.guarding) return;
       if (this.state === 'attack' || this.state === 'skill' || this.state === 'ult' || this.state === 'hurt' || this.state === 'stagger') {
         if (this.state !== 'stagger') this.bufferedGuard = 0.55;
         return;
@@ -487,23 +494,23 @@
       this.parryHeld = true;
       this.guardHeldT = 0;
       this.guardLinger = 0;
+      this.guardMax = this.isPlayer ? 2.0 : 0.62;   // 举盾最长 2 秒
       if (this.parryCd <= 0) {
-        // 敌人完美窗口永远可用；玩家有代价（3 秒），识破可缩短
-        if (this.isPlayer) this.parryCd = this.status.insight > 0 ? 1.7 : 3.0;
+        // 完美防反有代价：玩家 3 秒（识破 1.7），敌人 2.8 秒
+        this.parryCd = this.isPlayer ? (this.status.insight > 0 ? 1.7 : 3.0) : 2.8;
         this.parryCdMax = this.isPlayer ? (this.status.insight > 0 ? 1.7 : 3.0) : 0;
         this.parryTimer = this.battle.parryWindow;
         MB.FX.ring(this.x, -this.y - 55, 6, 50, { color: '#cbb4ff', life: 0.3, width: 2, squash: 1.1 });
         if (this.isPlayer) MB.Sound.ui();
       } else if (this.isPlayer) {
-        // 冷却中：只能普通格挡
         MB.FX.ring(this.x, -this.y - 55, 4, 30, { color: '#5a6470', life: 0.24, width: 1.2, squash: 1.1 });
       }
       if (this.state !== 'guard') this.setState('guard');
     }
-    endGuard() {
+    endGuard(force) {
       this.bufferedGuard = 0;
       // 轻点也能维持一小段格挡，和长按一致
-      if (this.guardHeldT < 0.22 && this.guarding) {
+      if (!force && this.guardHeldT < 0.22 && this.guarding) {
         this.guardLinger = 0.3;
         return;
       }
@@ -511,6 +518,7 @@
       this.parryTimer = 0;
       if (this.state === 'guard') this.setState('idle');
       this.guarding = false;
+      this.guardLinger = 0;
     }
 
     useSkill(i) {
