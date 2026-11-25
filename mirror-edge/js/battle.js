@@ -398,12 +398,27 @@
     onHit(target, attacker, dmg, def) { /* applyDamage 已处理表现 */ }
 
     onBlock(p, attacker, def) {
-      this.hitstopSet(0.05);
-      this.shake(5);
-      MB.FX.spark(p.x + p.facing * 26, -p.y - 62, 12, { color: '#ffe6b0', speed: 340, life: 0.38 });
-      MB.FX.ring(p.x + p.facing * 26, -p.y - 62, 6, 52, { color: '#ffe6b0', life: 0.22, width: 2 });
-      MB.FX.text(p.x, -p.y - 130, 'BLOCK', { color: '#ffe6b0', size: 14 });
+      const gx = p.x + p.facing * 30, gy = -p.y - 62;
+      this.hitstopSet(0.07);
+      this.shake(6);
+      this.cam.punch(0.012);
+      // 格挡火花：扇形迸射
+      MB.FX.spark(gx, gy, 16, { color: '#ffe6b0', speed: 420, dir: p.facing > 0 ? 0 : Math.PI, spread: 1.0, life: 0.45, size: 1.9 });
+      MB.FX.spark(gx, gy, 8, { color: '#ffffff', speed: 260, life: 0.3, size: 1.6 });
+      MB.FX.ring(gx, gy, 6, 62, { color: '#ffe6b0', life: 0.24, width: 2.5 });
+      MB.FX.ring(gx, gy, 24, 40, { color: '#ffffff', life: 0.18, width: 1.4 });
+      MB.FX.add({ type: 'impact', x: gx, y: gy, rot: U.rand(TAU), size: 18, life: 0.12, color: '#ffe6b0', alpha: 0.9 });
+      MB.FX.text(p.x, -p.y - 138, '格 挡', { color: '#ffe6b0', size: 14 });
       MB.Sound.guard();
+      // 弹反：攻击者被震开，连段中断，给你一个反击窗口
+      if (attacker && !attacker.dead) {
+        attacker.act = null;
+        attacker.setState('hurt');
+        attacker.stateT = 0;
+        attacker.hurtT = 0.26;
+        attacker.vx -= attacker.facing * 230;
+        attacker.telegraph = null;
+      }
       if (MB.UI) MB.UI.hint('', 0);
     }
 
