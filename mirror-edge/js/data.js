@@ -223,9 +223,9 @@
 
   /* ───────── 难度 ───────── */
   MB.DIFFS = [
-    { id: 0, name: '普通', sub: '见习', playerDmg: 1.0, enemyDmg: 0.82, aiReact: 1.55, aiSpeed: 0.92, feint: 0.0, unblockBias: 0.15, parryWindow: 0.19, punish: 0.6 },
-    { id: 1, name: '困难', sub: '修罗', playerDmg: 0.92, enemyDmg: 1.08, aiReact: 1.0, aiSpeed: 1.0, feint: 0.25, unblockBias: 0.55, parryWindow: 0.15, punish: 0.85 },
-    { id: 2, name: '噩梦', sub: '无间', playerDmg: 0.85, enemyDmg: 1.32, aiReact: 0.7, aiSpeed: 1.1, feint: 0.45, unblockBias: 0.9, parryWindow: 0.115, punish: 1.0 },
+    { id: 0, name: '普通', sub: '见习', playerDmg: 1.0, enemyDmg: 0.82, aiReact: 1.55, aiSpeed: 0.92, feint: 0.0, unblockBias: 0.15, parryWindow: 0.34, punish: 0.6 },
+    { id: 1, name: '困难', sub: '修罗', playerDmg: 0.92, enemyDmg: 1.08, aiReact: 1.0, aiSpeed: 1.0, feint: 0.25, unblockBias: 0.55, parryWindow: 0.27, punish: 0.85 },
+    { id: 2, name: '噩梦', sub: '无间', playerDmg: 0.85, enemyDmg: 1.32, aiReact: 0.7, aiSpeed: 1.1, feint: 0.45, unblockBias: 0.9, parryWindow: 0.2, punish: 1.0 },
   ];
 
   /* ───────── 技能目录 ───────── */
