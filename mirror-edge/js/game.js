@@ -138,7 +138,7 @@
       if (a !== 'guard') return;
       if (Game.scene !== 'battle' || !Game.battle || Game.paused || Game.battle.over) return;
       if (Game.battle.intro > 0) return;
-      Game.battle.player.startGuard();
+      Game.battle.player.startParry();
     };
     MB.Sound.init();
     MB.Sound.setMusic(MB.SAVE.settings.music / 100);
