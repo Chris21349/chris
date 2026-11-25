@@ -479,6 +479,13 @@
       MB.FX.text(f.x, -f.y - 150, '破 势', { color: '#ffcf7a', size: 26, bold: true });
       MB.Sound.boom(0.6);
     }
+    onGuardExhaust(f) {
+      MB.FX.ring(f.x, -f.y - 55, 46, 8, { color: '#5a6470', life: 0.32, width: 2.4, squash: 1.1 });
+      MB.FX.spark(f.x, -f.y - 55, 8, { color: '#8fa4b8', speed: 220, life: 0.32 });
+      if (f.isPlayer) MB.FX.text(f.x, -f.y - 132, '力 竭', { color: '#ffb0b8', size: 15 });
+      MB.Sound.guard();
+    }
+
     onGuardBreak(f) {
       this.hitstopSet(0.12);
       this.shake(12);
