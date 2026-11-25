@@ -279,13 +279,14 @@
 
   BEH.sacrifice = {
     instant: true, air: true,
-    cast(f) {
+    cast(f, slot) {
       const b = f.battle;
       f.hp = Math.max(1, f.hp - f.hpMax * 0.08);
       MB.FX.text(f.x, -f.y - 140, '献祭', { color: col.red, size: 18 });
       MB.FX.spark(f.x, -f.y - 60, 24, { color: '#ff5570', speed: 260, life: 0.5 });
       MB.FX.ring(f.x, -f.y - 60, 120, 20, { color: col.red, life: 0.5, width: 3 });
-      for (let i = 0; i < f.cd.length; i++) f.cd[i] = 0;
+      // 只刷新其它技能，不刷新自己
+      for (let i = 0; i < f.cd.length; i++) if (i !== slot) f.cd[i] = 0;
       b.flashScreen('rgba(255,60,90,.12)', 0.3);
       MB.Sound.cast('dark');
     },
@@ -359,22 +360,37 @@
     cast(f) {
       const b = f.battle;
       f.beginAction({
-        total: 0.82, windup: 0.1, active: 0.5, hits: 3, healOnHit: 16,
-        anim: [{ t: 0, p: { torso: -84, head: -88, aFU: -30, aFF: -60, wpn: -70 } },
-        { t: 0.2, p: { torso: -96, head: -100, aFU: 30, aFF: 10, wpn: 60, tF: 70, sF: 88 } },
-        { t: 0.42, p: { torso: -80, head: -84, aFU: 100, aFF: 60, wpn: 150, tF: 96, sF: 92 } },
-        { t: 0.62, p: { torso: -98, head: -104, aFU: -60, aFF: -90, wpn: -120, tF: 66, sF: 96 } },
-        { t: 0.82, p: { torso: -88, head: -92, aFU: 46, aFF: 24, wpn: 82, tF: 74, sF: 92 } },
-        { t: 1, p: { torso: -88, head: -86, aFU: 80, aFF: 34, wpn: 55, tF: 85, sF: 89, hipY: 0 } }],
+        total: 1.5, windup: 0.08, active: 1.06, hits: 7, healOnHit: 12, move: true,
+        anim: [
+          { t: 0.00, p: { torso: -84, head: -88, aFU: -40, aFF: -80, aBU: 90, aBF: 70, wpn: -90, tF: 80, sF: 86, tB: 100, sB: 100, hipY: 2 } },
+          { t: 0.12, p: { torso: -98, head: -104, aFU: 30, aFF: 8, aBU: 100, aBF: 84, wpn: 66, tF: 66, sF: 90, tB: 114, sB: 104, hipY: 6 }, e: 'outQuint' },
+          { t: 0.24, p: { torso: -78, head: -84, aFU: 104, aFF: 66, aBU: 60, aBF: 30, wpn: 150, tF: 100, sF: 92, tB: 80, sB: 84, hipY: 4 }, e: 'outCubic' },
+          { t: 0.36, p: { torso: -102, head: -108, aFU: -64, aFF: -96, aBU: 40, aBF: 8, wpn: -122, tF: 62, sF: 96, tB: 120, sB: 108, hipY: 6 }, e: 'outQuint' },
+          { t: 0.48, p: { torso: -76, head: -82, aFU: 112, aFF: 78, aBU: 52, aBF: 22, wpn: 162, tF: 104, sF: 94, tB: 76, sB: 80, hipY: 3 }, e: 'outCubic' },
+          { t: 0.60, p: { torso: -104, head: -110, aFU: -72, aFF: -104, aBU: 36, aBF: 4, wpn: -134, tF: 58, sF: 98, tB: 124, sB: 112, hipY: 7 }, e: 'outQuint' },
+          { t: 0.72, p: { torso: -74, head: -80, aFU: 118, aFF: 84, aBU: 48, aBF: 18, wpn: 170, tF: 108, sF: 96, tB: 72, sB: 78, hipY: 2 }, e: 'outCubic' },
+          { t: 0.84, p: { torso: -100, head: -106, aFU: -50, aFF: -90, aBU: 44, aBF: 12, wpn: -110, tF: 64, sF: 94, tB: 118, sB: 106, hipY: 6 }, e: 'outQuint' },
+          { t: 0.94, p: { torso: -86, head: -92, aFU: 60, aFF: 32, aBU: 96, aBF: 76, wpn: 96, tF: 78, sF: 92, tB: 104, sB: 100, hipY: 2 }, e: 'outCubic' },
+          { t: 1.00, p: { torso: -88, head: -86, aFU: 80, aFF: 34, aBU: 102, aBF: 74, wpn: 55, tF: 85, sF: 89, tB: 96, sB: 99, hipY: 0 }, e: 'inOutCubic' },
+        ],
         onStrike(self, i) {
           const e = self.opponent;
           if (!e || e.dead) return;
-          const hit = self.rectHits({ x0: self.x - 130, x1: self.x + 130, y0: self.y + 10, y1: self.y + 110 }, e.bodyRect());
-          MB.FX.slash(e.x, -e.y - 55, U.rand(TAU), 96, { color: col.ice, width: 12, arc: 2 });
+          const dir = i % 2 === 0 ? 1 : -1;
+          const reach = 132;
+          const hit = self.rectHits({ x0: self.x - reach, x1: self.x + reach, y0: self.y + 8, y1: self.y + 112 }, e.bodyRect());
+          const ang = dir > 0 ? -0.5 + U.rand(0.9) : Math.PI + 0.5 - U.rand(0.9);
+          MB.FX.slash(e.x, -e.y - 52 - U.rand(26, -16), ang, 104, { color: i % 3 === 0 ? '#ffffff' : col.ice, width: 13, arc: 2.2, life: 0.22 });
+          MB.FX.spark(e.x, -e.y - 60, 4, { color: col.cyan, speed: 260, life: 0.28, size: 1.4 });
+          if (i === 6) {
+            MB.FX.ring(e.x, -e.y - 58, 8, 130, { color: col.ice, life: 0.34, width: 3 });
+            MB.FX.add({ type: 'impact', x: e.x, y: -e.y - 58, rot: U.rand(TAU), size: 40, life: 0.18, color: '#ffffff', alpha: 1 });
+          }
           if (hit) {
-            b.applyDamage(e, self, 46, { posture: 10, kb: 80 });
-            self.heal(14);
-            b.hitstop(0.035);
+            b.applyDamage(e, self, 38, { posture: 8, kb: 60, color: col.ice });
+            self.heal(12);
+            b.hitstopSet(0.028);
+            self.vx += self.facing * 60;
           }
         },
       }, 'skill');
