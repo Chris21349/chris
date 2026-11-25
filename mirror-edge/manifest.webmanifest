@@ -1,0 +1,20 @@
+{
+  "name": "镜刃 · MIRROR EDGE",
+  "short_name": "镜刃",
+  "id": "/mirror-edge/",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#04060a",
+  "theme_color": "#04060a",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "description": "以完美防反为骨、以闪避为魂的单机格斗。选择你的镜反，斩出属于自己的一刀。",
+  "categories": ["games", "action"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
