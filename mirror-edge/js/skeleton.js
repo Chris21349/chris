@@ -301,6 +301,7 @@
     if (!sk) return;
     const p = f.pose;
     const alpha = f.alpha == null ? 1 : f.alpha;
+    const BW = f.char.bulk || 1;
     ctx.save();
     ctx.translate(f.x, -f.y);
     ctx.scale(f.facing * f.scale, f.scale);
@@ -333,11 +334,11 @@
     }
 
     // 后侧腿 / 后臂
-    capsule(ctx, sk.hB.x, sk.hB.y, sk.kB.x, sk.kB.y, 9, dark, rim, glow, alpha * 0.9);
-    capsule(ctx, sk.kB.x, sk.kB.y, sk.fB.x, sk.fB.y, 7.4, dark, rim, glow, alpha * 0.9);
+    capsule(ctx, sk.hB.x, sk.hB.y, sk.kB.x, sk.kB.y, 9 * BW, dark, rim, glow, alpha * 0.9);
+    capsule(ctx, sk.kB.x, sk.kB.y, sk.fB.x, sk.fB.y, 7.4 * BW, dark, rim, glow, alpha * 0.9);
     foot(ctx, sk.fB, p, dark, rim, alpha * 0.8);
-    capsule(ctx, sk.sB.x, sk.sB.y, sk.eB.x, sk.eB.y, 7.6, dark, rim, glow, alpha * 0.9);
-    capsule(ctx, sk.eB.x, sk.eB.y, sk.hdB.x, sk.hdB.y, 6.2, dark, rim, glow, alpha * 0.9);
+    capsule(ctx, sk.sB.x, sk.sB.y, sk.eB.x, sk.eB.y, 7.6 * BW, dark, rim, glow, alpha * 0.9);
+    capsule(ctx, sk.eB.x, sk.eB.y, sk.hdB.x, sk.hdB.y, 6.2 * BW, dark, rim, glow, alpha * 0.9);
 
     // 战裙（袴）
     if (!ghost) {
@@ -348,8 +349,8 @@
       const hem = 24 + Math.sin((f.animT || 0) * 2.3) * 1.2;
       const p1 = { x: px0 - pp0.x * 11, y: py0 - pp0.y * 11 };
       const p2 = { x: px0 + pp0.x * 11, y: py0 + pp0.y * 11 };
-      const p3 = { x: px0 + pp0.x * 13.5 - sway, y: py0 + hem };
-      const p4 = { x: px0 - pp0.x * 13.5 - sway * 1.4, y: py0 + hem * 0.94 };
+      const p3 = { x: px0 + pp0.x * 13.5 * BW - sway, y: py0 + hem };
+      const p4 = { x: px0 - pp0.x * 13.5 * BW - sway * 1.4, y: py0 + hem * 0.94 };
       const gsk = ctx.createLinearGradient(px0, py0, px0, py0 + hem);
       gsk.addColorStop(0, th.bodyLight || '#16232c');
       gsk.addColorStop(1, '#05080c');
@@ -370,14 +371,14 @@
     const P0 = sk.pelvis, C = sk.chest;
     const lerpP2 = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
     const wl = lerpP2(P0, C, 0.4), rl = lerpP2(P0, C, 0.78);
-    const hipL = { x: P0.x + perp.x * 11, y: P0.y + perp.y * 11 };
-    const hipR = { x: P0.x - perp.x * 11, y: P0.y - perp.y * 11 };
-    const waistL = { x: wl.x + perp.x * 7.8, y: wl.y + perp.y * 7.8 };
-    const waistR = { x: wl.x - perp.x * 7.8, y: wl.y - perp.y * 7.8 };
-    const ribL = { x: rl.x + perp.x * 12.8, y: rl.y + perp.y * 12.8 };
-    const ribR = { x: rl.x - perp.x * 12.8, y: rl.y - perp.y * 12.8 };
-    const shL = { x: C.x + perp.x * 15.5, y: C.y + perp.y * 15.5 };
-    const shR = { x: C.x - perp.x * 15.5, y: C.y - perp.y * 15.5 };
+    const hipL = { x: P0.x + perp.x * 11 * BW, y: P0.y + perp.y * 11 * BW };
+    const hipR = { x: P0.x - perp.x * 11 * BW, y: P0.y - perp.y * 11 * BW };
+    const waistL = { x: wl.x + perp.x * 7.8 * BW, y: wl.y + perp.y * 7.8 * BW };
+    const waistR = { x: wl.x - perp.x * 7.8 * BW, y: wl.y - perp.y * 7.8 * BW };
+    const ribL = { x: rl.x + perp.x * 12.8 * BW, y: rl.y + perp.y * 12.8 * BW };
+    const ribR = { x: rl.x - perp.x * 12.8 * BW, y: rl.y - perp.y * 12.8 * BW };
+    const shL = { x: C.x + perp.x * 15.5 * BW, y: C.y + perp.y * 15.5 * BW };
+    const shR = { x: C.x - perp.x * 15.5 * BW, y: C.y - perp.y * 15.5 * BW };
     const torsoPts = [hipL, waistL, ribL, shL, shR, ribR, waistR, hipR];
     if (ghost) {
       poly(ctx, torsoPts, ghost, null, alpha * 0.5);
@@ -426,8 +427,8 @@
     drawHead(ctx, f, sk, p, ghost, alpha);
 
     // 前侧腿
-    capsule(ctx, sk.hF.x, sk.hF.y, sk.kF.x, sk.kF.y, 9.8, body, rim, glow, alpha);
-    capsule(ctx, sk.kF.x, sk.kF.y, sk.fF.x, sk.fF.y, 8, body, rim, glow, alpha);
+    capsule(ctx, sk.hF.x, sk.hF.y, sk.kF.x, sk.kF.y, 9.8 * BW, body, rim, glow, alpha);
+    capsule(ctx, sk.kF.x, sk.kF.y, sk.fF.x, sk.fF.y, 8 * BW, body, rim, glow, alpha);
     foot(ctx, sk.fF, p, body, rim, alpha);
 
     // 武器
@@ -462,8 +463,8 @@
       drawWeapon(ctx, f, w, p, ghost, alpha);
     }
     // 前臂
-    capsule(ctx, sk.sF.x, sk.sF.y, sk.eF.x, sk.eF.y, 8, body, rim, glow, alpha);
-    capsule(ctx, sk.eF.x, sk.eF.y, sk.hdF.x, sk.hdF.y, 6.6, body, rim, glow, alpha);
+    capsule(ctx, sk.sF.x, sk.sF.y, sk.eF.x, sk.eF.y, 8 * BW, body, rim, glow, alpha);
+    capsule(ctx, sk.eF.x, sk.eF.y, sk.hdF.x, sk.hdF.y, 6.6 * BW, body, rim, glow, alpha);
     if (!ghost) {
       ctx.globalAlpha = alpha * 0.95;
       ctx.fillStyle = th.accent;
