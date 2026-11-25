@@ -22,6 +22,7 @@ addEventListener('unhandledrejection',function(e){window.__errs.push('promise: '
 </head>
 <body>
 <canvas id="cv"></canvas>
+<div id="rotate"><div class="rot">⟲</div><p>横屏战斗视野更开阔</p><button id="rotSkip">仍然竖屏</button></div>
 <div id="vig"></div>
 
 <!-- ══════════════ 战斗 HUD ══════════════ -->
@@ -64,6 +65,7 @@ addEventListener('unhandledrejection',function(e){window.__errs.push('promise: '
   <div class="parry-badge" id="parryBadge">
     <span class="pb-k">镜反</span><span class="pb-n" id="parryName">断罪·一闪</span>
     <span class="pb-m" id="parryMark">◇◇◇</span>
+    <span class="pb-cd"><i id="parryCdBar"></i></span>
   </div>
 
   <div class="hint" id="hint"></div>
@@ -84,7 +86,7 @@ addEventListener('unhandledrejection',function(e){window.__errs.push('promise: '
 <div id="touch">
   <div id="stick" class="stick"><div class="stick-ring"></div><div class="knob"></div></div>
   <div class="tbtns">
-    <button class="tb tb-guard" data-act="guard"><span>御</span></button>
+    <button class="tb tb-guard" data-act="guard"><span>御</span><i class="tbcd" id="guardCd"></i></button>
     <button class="tb tb-dash" data-act="dash"><span>闪</span></button>
     <button class="tb tb-jump" data-act="jump"><span>跃</span></button>
     <button class="tb tb-attack" data-act="attack"><span>斩</span></button>
@@ -133,7 +135,7 @@ addEventListener('unhandledrejection',function(e){window.__errs.push('promise: '
 <section class="screen" id="scr-loadout">
   <header class="shead">
     <button class="back" data-back="title">←</button>
-    <div><h2>战 前 装 配</h2><p>四个技能位 · 一种镜反 · 一套属于你的打法</p></div>
+    <div><h2>战 前 装 配</h2><p>三个技能位 · 一种镜反 · 一套属于你的打法</p></div>
     <button class="go-fight" id="toStages">选择战场 →</button>
   </header>
   <div class="load-body">
@@ -182,7 +184,7 @@ addEventListener('unhandledrejection',function(e){window.__errs.push('promise: '
     <div class="keys">
       <h3>键位</h3>
       <p><kbd>A</kbd><kbd>D</kbd> 移动 · <kbd>W</kbd>/<kbd>空格</kbd> 跃起 · <kbd>J</kbd> 斩击（连点成连段） · <kbd>K</kbd> 重斩（长按蓄力）</p>
-      <p><kbd>L</kbd> 御/防反（松手取消） · <kbd>Shift</kbd> 闪避（有无敌帧） · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 技能 · <kbd>R</kbd> 极 · <kbd>Esc</kbd> 暂停</p>
+      <p><kbd>L</kbd> 御/防反（松手取消） · <kbd>Shift</kbd> 闪避（有无敌帧） · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 技能 · <kbd>R</kbd> 极 · <kbd>Esc</kbd> 暂停</p>
       <p class="dim">手机：左半屏拖动移动，右侧按钮战斗。防反窗口内「御」= 完美防反，提前按住只会普通格挡。</p>
     </div>
     <button class="danger" id="wipeBtn">清除存档</button>
