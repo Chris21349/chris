@@ -5,7 +5,7 @@
 (() => {
 'use strict';
 
-const VERSION = '7.3.0';
+const VERSION = '7.3.1';
 const STORAGE_KEY = 'soul-lantern:v1:save';
 const LEGACY_KEY = 'soul-lantern-save-v1';
 
@@ -148,6 +148,42 @@ const Sound = (() => {
     hurt() { tone(190, 0.22, { type: 'sawtooth', to: 70, gain: 0.18, filter: 'lowpass', freq: 900 }); },
     sword() { if (!ok('sword', 90)) return; noise(0.11, { freq: 2400, to: 700, gain: 0.08, q: 1.6 }); },
     talisman() { if (!ok('tal', 90)) return; tone(520, 0.12, { type: 'triangle', to: 900, gain: 0.07 }); },
+    seal() {
+      if (!ok('seal', 90)) return;
+      // 落符：低频闷响 + 纸响 + 铃
+      tone(180, 0.28, { type: 'sine', to: 62, gain: 0.16 });
+      noise(0.2, { freq: 1400, to: 260, gain: 0.09, q: 0.8 });
+      tone(1180, 0.16, { type: 'triangle', to: 620, gain: 0.05, delay: 0.03 });
+    },
+    inkSnap() {
+      if (!ok('ink', 90)) return;
+      noise(0.12, { freq: 2600, to: 700, gain: 0.075, q: 2.4 });
+      tone(320, 0.08, { type: 'triangle', to: 160, gain: 0.05 });
+    },
+    coinPing() {
+      if (!ok('coin', 70)) return;
+      tone(1760, 0.09, { type: 'triangle', to: 2400, gain: 0.045 });
+      tone(2640, 0.06, { type: 'sine', to: 3200, gain: 0.025, delay: 0.01 });
+    },
+    suck() {
+      if (!ok('suck', 200)) return;
+      tone(120, 0.35, { type: 'sine', to: 420, gain: 0.10 });
+      noise(0.3, { freq: 300, to: 1200, gain: 0.05, q: 0.7 });
+    },
+    horn() {
+      if (!ok('horn', 120)) return;
+      tone(392, 0.22, { type: 'sawtooth', to: 396, gain: 0.055 });
+      tone(587, 0.2, { type: 'sawtooth', to: 590, gain: 0.03, delay: 0.01 });
+    },
+    gallop() {
+      if (!ok('gallop', 120)) return;
+      noise(0.08, { freq: 520, to: 240, gain: 0.06, q: 0.9 });
+      tone(150, 0.07, { type: 'sine', to: 90, gain: 0.05 });
+    },
+    paperPop() {
+      if (!ok('paper', 70)) return;
+      noise(0.09, { freq: 3200, to: 900, gain: 0.05, q: 1.2 });
+    },
     bell() { if (!ok('bell', 260)) return; tone(660, 0.9, { type: 'sine', gain: 0.11 }); tone(990, 0.7, { type: 'sine', gain: 0.06, delay: 0.01 }); },
     boom() { if (!ok('boom', 110)) return; noise(0.28, { freq: 380, to: 60, gain: 0.16, q: 0.6 }); },
     boss() { tone(70, 1.3, { type: 'sawtooth', gain: 0.16, filter: 'lowpass', freq: 420 }); noise(1.0, { freq: 200, to: 60, gain: 0.10 }); },
@@ -157,9 +193,20 @@ const Sound = (() => {
 })();
 
 let USER_GESTURE = false;
+let lastHapticAt = 0;
+let vibActive = false;
 function haptic(ms = 12) {
-  if (!save.settings.haptic || !USER_GESTURE) return;
-  if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) { } }
+  if (!navigator.vibrate) return;
+  if (!save.settings.haptic || !USER_GESTURE) {
+    // 关闭时把还在跑的震动模式掐掉（只掐一次，别每帧都调）
+    if (vibActive) { try { navigator.vibrate(0); } catch (e) { } vibActive = false; }
+    return;
+  }
+  const now = performance.now();
+  if (now - lastHapticAt < 140) return;   // 限流：连续事件不叠震
+  lastHapticAt = now;
+  vibActive = true;
+  try { navigator.vibrate(ms); } catch (e) { }
 }
 
 /* ───────────────────────── 画布 ───────────────────────── */
@@ -823,7 +870,7 @@ function updateFlameAwake(dt, form) {
       }
       hitArea(p.x, p.y, 178, dmg * 2.2, { knock: 260 });
       for (const e of G.enemies) if (e.alive && dist2(p.x, p.y, e.x, e.y) < 178 * 178) burn(e, dmg * 0.5, 4);
-      shake(8); Sound.boom(); haptic(16);
+      shake(8); Sound.boom();
     }
   }
 }
@@ -866,7 +913,8 @@ function updateTalismanAwake(dt, form) {
     G.sealRings.push({ x: p.x + Math.cos(aim) * 60, y: p.y + Math.sin(aim) * 60, life: 0.6, max: 0.6, r: 0, rMax: 170, col: '#ffd489' });
     shake(3);
   }
-  Sound.talisman();
+  Sound.seal();
+  haptic(10);   // 每次落符轻震一下，不持续震
 }
 
 /* 桃木剑 · 觉醒：斩月 / 剑冢 */
@@ -1314,7 +1362,7 @@ function updateInk(dt, lv, form) {
       inkLine(p.x + i * step, p.y - 420, p.x + i * step, p.y + 420, dmg * 0.85, 16, 0.7);
       inkLine(p.x - 420, p.y + i * step, p.x + 420, p.y + i * step, dmg * 0.85, 16, 0.7);
     }
-    shake(5); Sound.sword();
+    shake(5); Sound.inkSnap();
     return;
   }
   if (form === 'mutate') {
@@ -1330,7 +1378,7 @@ function updateInk(dt, lv, form) {
   p.cd.ink = 1.45 / p.atkMul;
   const len = 320 + lv * 20;
   inkLine(p.x, p.y, p.x + Math.cos(aim) * len, p.y + Math.sin(aim) * len, dmg, 18, 0.45);
-  Sound.sword();
+  Sound.inkSnap();
 }
 
 /* 铜钱剑 */
@@ -1386,7 +1434,7 @@ function updateCoin(dt, lv, form) {
   const a = t ? Math.atan2(t.y - p.y, t.x - p.x) : aim;
   p.cd.coin = 1.1 / p.atkMul;
   G.shots.push({ type: 'coin', x: p.x, y: p.y, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, dmg, bounces: 3 + lv, life: 2.4, rot: a, hitSet: new Set() });
-  Sound.talisman();
+  Sound.coinPing();
 }
 
 /* 葫芦 */
@@ -1442,7 +1490,7 @@ function updateGourd(dt, lv, form) {
     ring(p.x, p.y, R * 0.85, '#8fe6a0', 0.6, 8);
     shake(7); Sound.boom();
   }
-  Sound.talisman();
+  Sound.suck();
 }
 
 /* 唢呐 */
@@ -1499,7 +1547,7 @@ function updateSuona(dt, lv, form) {
       G.shots.push({ type: 'bird', x: p.x, y: p.y, vx: Math.cos(a) * 420, vy: Math.sin(a) * 420, dmg: dmg * 0.8, life: 1.6, rot: a, hitSet: new Set(), pierce: 2 });
     }
   }
-  Sound.sword();
+  Sound.horn();
 }
 
 /* 纸马 */
@@ -1544,7 +1592,7 @@ function updateHorse(dt, lv, form) {
     type: 'horse', x: p.x, y: p.y, vx: Math.cos(aim) * 560, vy: Math.sin(aim) * 560,
     dmg, pierce: 2 + lv, life: 1.3, rot: aim, hitSet: new Set()
   });
-  Sound.sword();
+  Sound.gallop();
 }
 
 function updateWeapons(dt) {
@@ -1918,6 +1966,7 @@ function updateShots(dt) {
           ring(s.x, s.y, s.radius, '#f0c674', 0.42, 4);
           burst(s.x, s.y, 12, '#ffd489', { spd: 230, size: 3, life: 0.45 });
           Sound.boom();
+          Sound.paperPop();
           shake(2.5);
           hitArea(s.x, s.y, s.radius, s.dmg, { knock: 150 });
         }
@@ -5603,7 +5652,6 @@ function openLevelUp() {
   renderCards();
   showScreen('levelup');
   Sound.levelup();
-  haptic(14);
 }
 
 function renderCards() {
@@ -5670,7 +5718,7 @@ function applyCard(c) {
       const mutated = Math.random() < 0.30;
       p.awake[c.key] = mutated ? 'mutate' : 'awake';
       unlockCodex(c.key, p.awake[c.key]);
-      Sound.ui(); haptic(mutated ? [30, 40, 60] : 30);
+      Sound.ui(); haptic(mutated ? [0, 30, 40, 40] : 26);
       showAwaken(c.key, p.awake[c.key], closeCardFlow);
       return;
     }
@@ -5957,7 +6005,13 @@ function bindUI() {
   $('btnHome').addEventListener('click', () => { Sound.ui(); fadeTo(backHome); });
 
   $('swSound').addEventListener('click', () => { save.settings.sound = !save.settings.sound; persist(); applySettingsUI(); if (save.settings.sound) Sound.ui(); });
-  $('swHaptic').addEventListener('click', () => { save.settings.haptic = !save.settings.haptic; persist(); applySettingsUI(); haptic(15); });
+  $('swHaptic').addEventListener('click', () => {
+    save.settings.haptic = !save.settings.haptic;
+    persist();
+    applySettingsUI();
+    if (!save.settings.haptic) { try { navigator.vibrate && navigator.vibrate(0); } catch (e) { } }
+    else haptic(15);
+  });
   $('swDmg').addEventListener('click', () => { save.settings.dmg = !save.settings.dmg; persist(); applySettingsUI(); });
 
   $('btnFixGfx').addEventListener('click', () => {

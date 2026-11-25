@@ -1,5 +1,5 @@
 /* 引魂灯 Service Worker —— 离线可用 */
-const CACHE = 'soul-lantern-v7.3.0';
+const CACHE = 'soul-lantern-v7.3.1';
 const ASSETS = [
   './',
   './index.html',
