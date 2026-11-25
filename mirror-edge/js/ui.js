@@ -82,6 +82,8 @@
       e.target.value = '';
     });
     D.exportBtn.addEventListener('click', () => MB.Game.exportSave());
+    const fu = document.getElementById('forceUpdate');
+    if (fu) fu.addEventListener('click', () => { MB.Game.forceUpdate(); });
     D.wipeBtn.addEventListener('click', () => {
       if (confirm('确定清除全部存档？此操作不可撤销。')) MB.Game.wipe();
     });
