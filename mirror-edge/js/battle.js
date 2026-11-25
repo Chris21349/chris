@@ -75,6 +75,7 @@
     get parryWindow() {
       return this.diff.parryWindow * (this.player.status.insight > 0 ? 1.9 : 1);
     }
+    get perfectWindow() { return this.parryWindow; }
 
     /* ───────── 时间控制 ───────── */
     hitstopSet(t) { this.hitstop = Math.max(this.hitstop, t * this.stopScale); }
@@ -154,7 +155,9 @@
               MB.Sound.parry();
             } else {
               p.hitDone = true;
+              const wasParry = tgt.parryActive > 0;
               this.applyDamage(tgt, p.owner, p.dmg, { posture: p.posture || 8, kb: p.kb || 100, color: p.color });
+              if (wasParry) { p.life = 0; dead = true; }
               MB.FX.ring(p.x, p.y, 4, 60, { color: p.color, life: 0.28, width: 2 });
               MB.FX.spark(p.x, p.y, 12, { color: p.color, speed: 380, life: 0.4 });
               this.hitstopSet(0.05);
@@ -184,7 +187,7 @@
         z.acc = (z.acc || 0) + dt;
         if (z.tickRate && z.acc >= z.tickRate) {
           z.acc = 0;
-          if (inZone) this.applyDamage(e, z.owner, z.dmg, { posture: 3, small: true, kb: 0, color: z.color });
+          if (inZone) this.applyDamage(e, z.owner, z.dmg, { posture: 3, small: true, kb: 0, color: z.color, parryable: false });
         }
         if (z.t < 0.4) {
           MB.FX.add({ type: 'glow', x: z.x + U.rand(z.r, -z.r) * 0.6, y: -U.rand(120, 0), vx: 0, vy: -60, life: 0.7, size: 2, color: z.color, alpha: 0.7 });
@@ -245,8 +248,7 @@
       if (I.justPressed('heavy')) p.tryAttack('heavy');
       if (I.justPressed('jump')) p.tryJump();
       if (I.justPressed('dash')) p.tryDash(p.moveDir || p.facing);
-      if (I.justPressed('guard')) p.startGuard();
-      if (I.justReleased('guard')) p.endGuard();
+      if (I.justPressed('guard')) p.startParry();
       for (let i = 0; i < 3; i++) {
         if (I.justPressed('sk' + (i + 1))) p.useSkill(i);
       }
@@ -281,13 +283,13 @@
 
     /* ───────── 战斗事件 ───────── */
     perfectParry(p, e, def) {
-      p.parryTimer = 0;
+      p.parryActive = 0;
+      p.parryElapsed = 0;
       p.posture = Math.min(p.postureMax, p.posture + 30);
       p.postureDelay = 0;
-      p.guarding = true;
       p.ult = Math.min(100, p.ult + 10);
       p.mirrorStacks++;
-      p.setState('guard');
+      p.setState('idle');
       this.stats.perfect++;
       this.hitstopSet(0.2);
       this.timeStop(0.16);
@@ -356,6 +358,52 @@
       });
     }
 
+    resolveParry(def, att, hitDef) {
+      const perfect = def.parryElapsed <= def.parryPerfect;
+      def.parryActive = 0;
+      def.parryElapsed = 0;
+      if (perfect) this.perfectParry(def, att, hitDef);
+      else this.normalParry(def, att, hitDef);
+    }
+
+    normalParry(def, att, hitDef) {
+      const dir = att.x >= def.x ? 1 : -1;
+      def.facing = -dir;
+      this.hitstopSet(0.1);
+      this.timeStop(0.05);
+      this.shake(8);
+      const gx = def.x + dir * 30, gy = -def.y - 62;
+      MB.FX.screenFlash('#cfe4ff', 0.22, 0.1);
+      MB.FX.ring(gx, gy, 8, 120, { color: '#cfe0ff', life: 0.36, width: 3 });
+      MB.FX.ring(gx, gy, 40, 80, { color: '#ffffff', life: 0.24, width: 1.6 });
+      MB.FX.spark(gx, gy, 16, { color: '#e8f4ff', speed: 460, dir: dir > 0 ? 0 : Math.PI, spread: 1.2, life: 0.4 });
+      MB.FX.add({ type: 'impact', x: gx, y: gy, rot: U.rand(TAU), size: 30, life: 0.16, color: '#ffffff', alpha: 1 });
+      MB.FX.text(def.x, -def.y - 150, '防 反', { color: '#dff0ff', size: 18, bold: true });
+      MB.Sound.parry();
+      def.posture = Math.min(def.postureMax, def.posture + 18);
+      def.ult = Math.min(100, def.ult + 7);
+      if (def.isPlayer) { this.stats.parry = (this.stats.parry || 0) + 1; this.combo = 0; }
+      // 挡下这一击，对方硬直
+      att.act = null;
+      att.staggered = true; att.staggerDur = 0.5;
+      att.setState('stagger'); att.stateT = 0;
+      att.vx = -att.facing * 220;
+      // 自动反击
+      const counter = def.char.light && def.char.light[0];
+      def.setState('attack'); def.stateT = 0; def.act = null;
+      if (counter) {
+        def.beginAction(Object.assign({}, counter, { dmg: Math.round(counter.dmg * 0.9), windup: 0.08, active: 0.09, recover: 0.2, total: 0.37 }), 'attack');
+        def.trailOn = true;
+      }
+      this.later(0.12, () => {
+        if (att.dead || def.dead) return;
+        const dmg = def.isPlayer ? 74 : 56;
+        this.applyDamage(att, def, dmg, { posture: 18, kb: 200, kbUp: 40, color: '#dff0ff', parryable: false });
+        MB.FX.slash(att.x, -att.y - 58, def.facing > 0 ? 0 : Math.PI, 96, { color: '#ffffff', width: 14, arc: 2 });
+        this.shake(5);
+      });
+    }
+
     perfectDodge(p, e, def) {
       p.ult = Math.min(100, p.ult + 8);
       this.stats.dodge++;
@@ -372,6 +420,11 @@
 
     applyDamage(target, source, base, o = {}) {
       if (!target || target.dead) return 0;
+      if (o.parryable !== false && source && source !== target && target.parryActive > 0 &&
+          !(o.def && o.def.unblockable)) {
+        this.resolveParry(target, source, o.def || { dmg: base, posture: o.posture || 0 });
+        return 0;
+      }
       let amt = base;
       if (source) amt *= source.atkMul;
       amt *= target.takenMul;
