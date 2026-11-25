@@ -27,13 +27,13 @@
       this.enemyChar.theme = Object.assign({}, MB.ENEMIES[this.stage.enemy].theme);
 
       const narrow = Math.min(window.innerWidth, window.innerHeight) < 620;
-      this.bounds = narrow ? 320 : 560;
+      this.bounds = narrow ? 640 : 920;
       this.player = new MB.Fighter(this, MB.PLAYER, 'player');
       this.enemy = new MB.Fighter(this, this.enemyChar, 'enemy');
-      const sm = narrow ? 1.34 : 1;
+      const sm = narrow ? 1.22 : 1;
       this.player.scale *= sm; this.enemy.scale *= sm;
-      this.player.x = narrow ? -130 : -180; this.player.facing = 1;
-      this.enemy.x = narrow ? 130 : 180; this.enemy.facing = -1;
+      this.player.x = narrow ? -250 : -300; this.player.facing = 1;
+      this.enemy.x = narrow ? 250 : 300; this.enemy.facing = -1;
       this.player.skills = MB.PLAYER.skills || [];
       this.ai = new MB.AI(this.enemy, this, this.diff);
 
@@ -247,7 +247,7 @@
       if (I.justPressed('dash')) p.tryDash(p.moveDir || p.facing);
       if (I.justPressed('guard')) p.startGuard();
       if (I.justReleased('guard')) p.endGuard();
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 3; i++) {
         if (I.justPressed('sk' + (i + 1))) p.useSkill(i);
       }
       if (I.justPressed('ult')) p.useUlt();
@@ -289,8 +289,8 @@
       p.mirrorStacks++;
       p.setState('guard');
       this.stats.perfect++;
-      this.hitstopSet(0.14);
-      this.timeStop(0.14);
+      this.hitstopSet(0.2);
+      this.timeStop(0.16);
       this.shake(13);
       MB.FX.screenFlash('#ffffff', 0.5, 0.13);
       MB.FX.ring(p.x, -p.y - 62, 10, 210, { color: '#ffffff', life: 0.55, width: 5 });
@@ -302,19 +302,58 @@
       MB.Sound.perfect();
       this.zoomFocus(p.x, 1.16, 0.5);
 
-      // 敌人后仰
-      e.staggered = true; e.staggerDur = 0.9;
+      // 敌人后仰（有镜返能力的敌人会留一个反制窗口）
+      const canCounter = !e.dead && (e.char.canParry || (this.diffIdx >= 2 && Math.random() < 0.3));
+      e.staggered = true; e.staggerDur = canCounter ? 0.3 : 0.9;
       e.setState('stagger'); e.stateT = 0; e.act = null; e.guarding = false;
       e.posture = Math.max(0, e.posture - 34); e.postureDelay = 1.6;
       e.setStatus('broken', 3.2);
       e.vx += p.facing * 300;
       e.flash = 1;
       e.hurtT = 0.3;
+      if (canCounter) {
+        e.counterParry = 1.05;
+        MB.FX.ring(e.x, -e.y - 60, 30, 96, { color: '#ff6b7d', life: 0.45, width: 2.4 });
+        MB.FX.text(e.x, -e.y - 150, '镜 返', { color: '#ff8fa0', size: 18, bold: true });
+        MB.FX.ember(e.x, -e.y - 60, 12, { color: '#ff6b7d', r: 30, life: 0.8 });
+      }
 
       this.combo = 0;
       if (MB.UI) MB.UI.parryPulse();
       const style = MB.PARRY[MB.PLAYER.parryStyle] || MB.PARRY.condemn;
       if (style.onPerfect) style.onPerfect(this, p, e, def);
+    }
+
+    counterParry(def, att, hitDef) {
+      const b = this;
+      b.hitstopSet(0.16);
+      b.timeStop(0.12);
+      b.shake(11);
+      MB.FX.screenFlash('#ffd0d8', 0.5, 0.15);
+      MB.FX.ring(def.x, -def.y - 62, 10, 190, { color: '#ffffff', life: 0.5, width: 4 });
+      MB.FX.ring(def.x, -def.y - 62, 40, 130, { color: '#ff6b7d', life: 0.4, width: 2 });
+      MB.FX.shard(def.x, -def.y - 62, 16, { color: '#ffd6de', speed: 480 });
+      MB.FX.spark(def.x, -def.y - 62, 18, { color: '#ffffff', speed: 560, life: 0.42 });
+      MB.FX.text(def.x, -def.y - 170, '镜返 · 破', { color: '#ff6b7d', size: 22, bold: true });
+      MB.FX.text(att.x, -att.y - 130, '被镜返', { color: '#ff8fa0', size: 15 });
+      MB.Sound.perfect();
+      // 玩家的这一击被吞掉，并被震退
+      att.act = null;
+      att.staggered = true; att.staggerDur = 0.55;
+      att.setState('stagger'); att.stateT = 0;
+      att.vx = -att.facing * 260;
+      att.posture = Math.max(0, att.posture - 12);
+      def.invulnT = Math.max(def.invulnT, 0.45);
+      def.posture = Math.min(def.postureMax, def.posture + 20);
+      def.ult = Math.min(100, def.ult + 8);
+      // 敌人立刻反击
+      const atk = (def.char.attacks || []).find((a) => !a.hide) || MB.ENEMIES.ash.attacks[0];
+      b.later(0.3, () => {
+        if (def.dead || att.dead) return;
+        def.facing = att.x >= def.x ? 1 : -1;
+        def.beginAction(Object.assign({}, atk, { windup: 0.34, active: 0.1, recover: 0.3, total: 0.74 }), 'attack');
+        def.telegraph = { t: 0, dur: 0.34, color: '#ff3550' };
+      });
     }
 
     perfectDodge(p, e, def) {
@@ -387,7 +426,7 @@
         bold: o.big, vy: -150, g: 120, life: 0.8,
       });
       MB.Sound.hit(o.big ? 1.6 : (o.small ? 0.5 : 1));
-      this.hitstopSet((o.big ? 0.1 : 0.045) + Math.min(0.03, amt / 3000));
+      this.hitstopSet((o.big ? 0.15 : 0.072) + Math.min(0.04, amt / 2600));
       this.cam.punch(o.big ? 0.045 : (o.small ? 0.004 : 0.014));
       if (o.big) this.shake(9);
 
@@ -399,7 +438,7 @@
 
     onBlock(p, attacker, def) {
       const gx = p.x + p.facing * 30, gy = -p.y - 62;
-      this.hitstopSet(0.07);
+      this.hitstopSet(0.09);
       this.shake(6);
       this.cam.punch(0.012);
       // 格挡火花：扇形迸射
@@ -447,8 +486,22 @@
       MB.FX.text(f.x, -f.y - 150, 'GUARD BREAK', { color: '#ff6b7d', size: 20, bold: true });
       MB.Sound.boom(0.8);
     }
+    skillFlare(f, def) {
+      const c = f.theme.glow;
+      const y = -f.y - 62;
+      MB.FX.ring(f.x, y, 8, 96, { color: c, life: 0.36, width: 2.2 });
+      MB.FX.ring(f.x, y, 30, 62, { color: '#ffffff', life: 0.22, width: 1.4 });
+      MB.FX.ember(f.x, y, 16, { color: c, r: 34, life: 1.1, g: -30 });
+      for (let i = 0; i < 12; i++) {
+        MB.FX.add({ type: 'glow', x: f.x + U.rand(26, -26), y: y + U.rand(50, -50), vx: U.rand(60, -60), vy: U.rand(-40, -140), g: -20, life: U.rand(0.9, 0.4), size: U.rand(3, 1.2), color: c, alpha: 0.85 });
+      }
+      MB.FX.spark(f.x, y, 10, { color: c, speed: 320, life: 0.35 });
+      MB.FX.add({ type: 'impact', x: f.x, y, rot: U.rand(TAU), size: 26, life: 0.16, color: c, alpha: 0.9 });
+    }
+
     onSkill(f, def, i) {
       MB.Sound.cast();
+      this.skillFlare(f, def);
       if (f.isPlayer && def.instant) MB.FX.text(f.x, -f.y - 148, def.name, { color: '#bff6ff', size: 15 });
     }
     startUlt(f) {
@@ -513,7 +566,7 @@
       const p = this.player, e = this.enemy;
       const mid = (p.x + e.x) / 2;
       const d = Math.abs(p.x - e.x);
-      let z = 1.06 - U.clamp(d / 1700, 0, 0.3);
+      let z = 1.1 - U.clamp(d / 2400, 0, 0.24);
       let tx = mid;
       if (this.focusT > 0) { z *= this.focusZoom; tx = U.lerp(mid, this.focusX, 0.6); }
       if (this.over) z *= 1.05;
