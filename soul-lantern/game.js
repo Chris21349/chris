@@ -5,7 +5,7 @@
 (() => {
 'use strict';
 
-const VERSION = '7.2.1';
+const VERSION = '7.3.0';
 const STORAGE_KEY = 'soul-lantern:v1:save';
 const LEGACY_KEY = 'soul-lantern-save-v1';
 
@@ -352,6 +352,36 @@ const WEAPONS = {
       ? '油纸伞绕身旋转，伞沿绞杀近敌，每 2.6 秒射出 3 根伞骨。<b>近身绞杀</b>'
       : `伞骨 <b>${2 + lv}</b> 根（每级 +1），伤害 <b>+${Math.round((lv - 1) * 16)}%</b>`
   },
+  ink: {
+    name: '墨斗', glyph: '墨', max: 5, kind: 'weapon',
+    desc: lv => lv === 0
+      ? '甩出一道墨线，齐着线把鬼切成两截。<b>直线切割</b>'
+      : `墨线长度 <b>${320 + lv * 20}</b>，伤害 <b>+${Math.round((lv - 1) * 18)}%</b>`
+  },
+  coin: {
+    name: '铜钱剑', glyph: '钱', max: 5, kind: 'weapon',
+    desc: lv => lv === 0
+      ? '掷一枚铜钱，在鬼堆里弹来弹去。<b>弹射</b>'
+      : `弹射次数 <b>${3 + lv}</b>，伤害 <b>+${Math.round((lv - 1) * 15)}%</b>`
+  },
+  gourd: {
+    name: '葫芦', glyph: '葫', max: 5, kind: 'weapon',
+    desc: lv => lv === 0
+      ? '葫芦张嘴吸一口气，把鬼往身边拖，再吐一口毒。<b>聚怪</b>'
+      : `吸取半径 <b>${200 + lv * 18}</b>，伤害 <b>+${Math.round((lv - 1) * 16)}%</b>`
+  },
+  suona: {
+    name: '唢呐', glyph: '唢', max: 5, kind: 'weapon',
+    desc: lv => lv === 0
+      ? '一嗓子吹出去，声浪把人推个跟头。<b>声波扇形</b>'
+      : `声浪距离 <b>${250 + lv * 16}</b>，伤害 <b>+${Math.round((lv - 1) * 16)}%</b>`
+  },
+  horse: {
+    name: '纸马', glyph: '马', max: 5, kind: 'weapon',
+    desc: lv => lv === 0
+      ? '放一匹纸马，撒开蹄子直冲出去。<b>直线冲锋</b>'
+      : `纸马穿透 <b>${2 + lv}</b>，伤害 <b>+${Math.round((lv - 1) * 16)}%</b>`
+  },
   mirror: {
     name: '铜镜', glyph: '镜', max: 5, kind: 'weapon',
     desc: lv => lv === 0
@@ -401,6 +431,26 @@ const AWAKEN = {
     awake: { name: '千机伞', glyph: '机', desc: '伞面全张，十骨齐发，张合之间尽是杀机。' },
     mutate: { name: '无字伞', glyph: '无', desc: '撑开一片无字天地，进伞者寸步难行，血尽而亡。' }
   },
+  ink: {
+    awake: { name: '天罗', glyph: '网', desc: '墨线纵横成网，收网一瞬，满屏皆断。' },
+    mutate: { name: '墨龙', glyph: '龙', desc: '墨线化龙，摇头摆尾游过之处尽成墨色。' }
+  },
+  coin: {
+    awake: { name: '万贯', glyph: '贯', desc: '铜钱串成一圈绕身飞旋，轮过之处寸草不生。' },
+    mutate: { name: '钱雨', glyph: '雨', desc: '天上落钱，一枚三弹，砸得满地都是。' }
+  },
+  gourd: {
+    awake: { name: '吸星', glyph: '吸', desc: '葫芦倒扣，一方天地都被吸进去，再一口喷出来。' },
+    mutate: { name: '化血', glyph: '血', desc: '葫芦吃鬼，吃进去的血补到提灯人身上。' }
+  },
+  suona: {
+    awake: { name: '百鸟朝凤', glyph: '凤', desc: '百鸟自声浪里飞出，绕着灯打转。' },
+    mutate: { name: '丧音', glyph: '丧', desc: '换一支丧曲，声音沉下去，鬼也跟着沉下去。' }
+  },
+  horse: {
+    awake: { name: '万马奔腾', glyph: '奔', desc: '一整个马队踏过去，蹄下不留活口。' },
+    mutate: { name: '阴兵过境', glyph: '兵', desc: '纸马化成阴兵，列队走过战场。' }
+  },
   mirror: {
     awake: { name: '日月镜', glyph: '月', desc: '日月双光绕身扫过，见光者皆焚，无处可躲。' },
     mutate: { name: '照骨镜', glyph: '骨', desc: '照见骨头里的东西——显形者死，死则连坐。' }
@@ -448,6 +498,9 @@ const G = {
   sealRings: [],
   beams: [],
   ringFx: [],
+  lines: [],
+  vortices: [],
+  chains: [],
   kills: 0,
   soulsRun: 0,
   depth: 1,
@@ -1044,9 +1097,31 @@ function updateCompass(dt, lv, form) {
       G.dialPulse = 1;
       Sound.crit();
     }
-    for (const e of G.enemies) {
-      if (e.alive && e.judgeT > 0 && Math.random() < 0.25) {
-        G.beams.push({ x1: p.x, y1: p.y, x2: e.x, y2: e.y, life: 0.12, max: 0.12 });
+    // 锁链：从盘面射向每一个被点名的鬼，并且继续延伸到屏幕外
+    p.cd.chain = (p.cd.chain || 0) - dt;
+    if (p.cd.chain <= 0) {
+      p.cd.chain = 0.12;
+      for (const e of G.enemies) {
+        if (!e.alive || e.judgeT <= 0) continue;
+        const a = Math.atan2(e.y - p.y, e.x - p.x);
+        const far = 900;
+        G.chains.push({
+          x1: p.x, y1: p.y,
+          x2: e.x + Math.cos(a) * far, y2: e.y + Math.sin(a) * far,
+          cx: (p.x + e.x) / 2 + Math.cos(a + 1.4) * 90,
+          cy: (p.y + e.y) / 2 + Math.sin(a + 1.4) * 90,
+          life: 0.28, max: 0.28
+        });
+      }
+      // 额外的环身锁链
+      for (let i = 0; i < 3; i++) {
+        const a = p.dialAng * 1.7 + i / 3 * TAU;
+        G.chains.push({
+          x1: p.x, y1: p.y,
+          x2: p.x + Math.cos(a) * 900, y2: p.y + Math.sin(a) * 900,
+          cx: p.x + Math.cos(a + 1.2) * 140, cy: p.y + Math.sin(a + 1.2) * 140,
+          life: 0.22, max: 0.22
+        });
       }
     }
     return;
@@ -1202,6 +1277,276 @@ function updateMirror(dt, lv, form) {
   Sound.talisman();
 }
 
+/* ── 线：判断敌人与线段距离 ── */
+function distToSeg(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const L2 = dx * dx + dy * dy || 1;
+  let t = ((px - x1) * dx + (py - y1) * dy) / L2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (x1 + dx * t), py - (y1 + dy * t));
+}
+function inkLine(x1, y1, x2, y2, dmg, width, life) {
+  G.lines.push({ x1, y1, x2, y2, life: life || 0.34, max: life || 0.34, w: width || 16, dmg });
+  for (const e of G.enemies) {
+    if (!e.alive) continue;
+    if (distToSeg(e.x, e.y, x1, y1, x2, y2) < (width || 16) * 0.5 + e.r) {
+      damageEnemy(e, dmg, { knock: 120, fromX: x1, fromY: y1 });
+    }
+  }
+  for (let i = 0; i < 6; i++) {
+    const t = Math.random();
+    G.parts.push({ x: x1 + (x2 - x1) * t + rnd(10, -10), y: y1 + (y2 - y1) * t + rnd(10, -10), vx: rnd(40, -40), vy: rnd(40, -40), life: 0.5, max: 0.5, size: 3, col: '#2a2a33', type: 'ink', drag: 2, grav: 60 });
+  }
+}
+
+/* 墨斗 */
+function updateInk(dt, lv, form) {
+  const p = G.player;
+  const aim = (p.aim !== undefined ? p.aim : 0);
+  const dmg = 22 * (1 + (lv - 1) * 0.18) * p.dmgMul;
+  p.cd.ink = (p.cd.ink || 0) - dt;
+  if (p.cd.ink > 0) return;
+  if (form === 'awake') {
+    // 天罗：三横三竖一收网
+    p.cd.ink = 1.9 / p.atkMul;
+    const step = 86;
+    for (let i = -1; i <= 1; i++) {
+      inkLine(p.x + i * step, p.y - 420, p.x + i * step, p.y + 420, dmg * 0.85, 16, 0.7);
+      inkLine(p.x - 420, p.y + i * step, p.x + 420, p.y + i * step, dmg * 0.85, 16, 0.7);
+    }
+    shake(5); Sound.sword();
+    return;
+  }
+  if (form === 'mutate') {
+    // 墨龙
+    p.cd.ink = 2.2 / p.atkMul;
+    G.shots.push({
+      type: 'inkdragon', x: p.x, y: p.y, ang: aim, t: 0, life: 2.2,
+      dmg: dmg * 1.6, trail: [], radius: 34, hit: new Set()
+    });
+    Sound.boom(); shake(3);
+    return;
+  }
+  p.cd.ink = 1.45 / p.atkMul;
+  const len = 320 + lv * 20;
+  inkLine(p.x, p.y, p.x + Math.cos(aim) * len, p.y + Math.sin(aim) * len, dmg, 18, 0.45);
+  Sound.sword();
+}
+
+/* 铜钱剑 */
+function updateCoin(dt, lv, form) {
+  const p = G.player;
+  const aim = (p.aim !== undefined ? p.aim : 0);
+  const dmg = 18 * (1 + (lv - 1) * 0.15) * p.dmgMul;
+
+  if (form === 'awake') {
+    p.coinAng = (p.coinAng || 0) + dt * 3.2;
+    // 绕身钱轮
+    for (let i = 0; i < 12; i++) {
+      const a = p.coinAng + i / 12 * TAU;
+      const cx = p.x + Math.cos(a) * 86, cy = p.y + Math.sin(a) * 86 * 0.9;
+      for (const e of G.enemies) {
+        if (!e.alive || e.coinCd > 0) continue;
+        if (dist2(cx, cy, e.x, e.y) < (e.r + 16) * (e.r + 16)) {
+          e.coinCd = 0.35;
+          damageEnemy(e, dmg * 0.7, { knock: 120, fromX: p.x, fromY: p.y });
+        }
+      }
+    }
+    p.cd.coin = (p.cd.coin || 0) - dt;
+    if (p.cd.coin <= 0) {
+      p.cd.coin = 2.6 / p.atkMul;
+      for (let i = 0; i < 8; i++) {
+        const a = p.coinAng + i / 8 * TAU;
+        G.shots.push({ type: 'coin', x: p.x, y: p.y, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, dmg: dmg * 1.1, bounces: 4, life: 2.6, rot: a, hitSet: new Set() });
+      }
+      Sound.talisman();
+    }
+    return;
+  }
+
+  if (form === 'mutate') {
+    p.cd.coin = (p.cd.coin || 0) - dt;
+    if (p.cd.coin <= 0) {
+      p.cd.coin = 2.4 / p.atkMul;
+      for (let i = 0; i < 10; i++) {
+        G.shots.push({
+          type: 'coin', x: p.x + rnd(190, -190), y: p.y - 380, vx: rnd(40, -40), vy: 620,
+          dmg: dmg * 0.9, bounces: 3, life: 3, rot: 0, hitSet: new Set()
+        });
+      }
+      Sound.talisman();
+    }
+    return;
+  }
+
+  p.cd.coin = (p.cd.coin || 0) - dt;
+  if (p.cd.coin > 0) return;
+  const t = nearestEnemy(p.x, p.y, 520);
+  const a = t ? Math.atan2(t.y - p.y, t.x - p.x) : aim;
+  p.cd.coin = 1.1 / p.atkMul;
+  G.shots.push({ type: 'coin', x: p.x, y: p.y, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, dmg, bounces: 3 + lv, life: 2.4, rot: a, hitSet: new Set() });
+  Sound.talisman();
+}
+
+/* 葫芦 */
+function updateGourd(dt, lv, form) {
+  const p = G.player;
+  const dmg = 14 * (1 + (lv - 1) * 0.16) * p.dmgMul;
+
+  if (form === 'mutate') {
+    // 化血：持续吸，伤敌回血
+    p.cd.gourd = (p.cd.gourd || 0) - dt;
+    if (p.cd.gourd <= 0) {
+      p.cd.gourd = 0.4;
+      let healed = 0;
+      for (const e of G.enemies) {
+        if (!e.alive) continue;
+        if (dist2(p.x, p.y, e.x, e.y) < 210 * 210) {
+          const before = e.hp;
+          damageEnemy(e, 10 * p.dmgMul, { knock: 10, fromX: p.x, fromY: p.y, silent: true });
+          healed += Math.min(6, Math.max(0, before - e.hp) * 0.25);
+          // 朝玩家拖
+          const a = Math.atan2(p.y - e.y, p.x - e.x);
+          e.kx += Math.cos(a) * 60; e.ky += Math.sin(a) * 60;
+        }
+      }
+      if (healed > 0) {
+        p.hp = Math.min(p.hpMax, p.hp + healed);
+        if (Math.random() < 0.3) dmgText(p.x, p.y - 30, '+' + Math.round(healed), '#7fe0bc', 12);
+      }
+    }
+    return;
+  }
+
+  p.cd.gourd = (p.cd.gourd || 0) - dt;
+  if (p.cd.gourd > 0) return;
+  const awake = form === 'awake';
+  p.cd.gourd = (awake ? 3.6 : 3.0) / p.atkMul;
+  const R = awake ? 260 : (200 + lv * 18);
+  p.vortexT = awake ? 0.9 : 0.7;
+  p.vortexR = R;
+  p.vortexDmg = dmg;
+  G.vortices.push({ x: p.x, y: p.y, r: R, life: p.vortexT, max: p.vortexT, x2: p.x, y2: p.y, awake });
+  for (const e of G.enemies) {
+    if (!e.alive) continue;
+    if (dist2(p.x, p.y, e.x, e.y) < R * R) {
+      const a = Math.atan2(p.y - e.y, p.x - e.x);
+      e.kx += Math.cos(a) * (awake ? 240 : 150);
+      e.ky += Math.sin(a) * (awake ? 240 : 150);
+      damageEnemy(e, dmg * 0.4, { knock: 0, silent: true });
+    }
+  }
+  if (awake) {
+    hitArea(p.x, p.y, R * 0.8, dmg * 3.2, { knock: 320 });
+    ring(p.x, p.y, R * 0.85, '#8fe6a0', 0.6, 8);
+    shake(7); Sound.boom();
+  }
+  Sound.talisman();
+}
+
+/* 唢呐 */
+function updateSuona(dt, lv, form) {
+  const p = G.player;
+  const aim = (p.aim !== undefined ? p.aim : 0);
+  const dmg = 24 * (1 + (lv - 1) * 0.16) * p.dmgMul;
+
+  if (form === 'mutate') {
+    // 丧音：持续的宽锥
+    p.cd.suona = (p.cd.suona || 0) - dt;
+    if (p.cd.suona <= 0) {
+      p.cd.suona = 0.35;
+      const range = 340, arc = 1.3;
+      G.cones.push({ x: p.x, y: p.y, ang: aim, range, arc, life: 0.3, max: 0.3, dark: true });
+      for (const e of G.enemies) {
+        if (!e.alive) continue;
+        const d = dist(p.x, p.y, e.x, e.y);
+        if (d > range) continue;
+        let da = Math.atan2(e.y - p.y, e.x - p.x) - aim;
+        while (da > Math.PI) da -= TAU;
+        while (da < -Math.PI) da += TAU;
+        if (Math.abs(da) < arc / 2) {
+          damageEnemy(e, dmg * 0.45, { knock: 20, fromX: p.x, fromY: p.y });
+          e.slow = 0.5; e.slowT = 0.6;
+        }
+      }
+    }
+    return;
+  }
+
+  p.cd.suona = (p.cd.suona || 0) - dt;
+  if (p.cd.suona > 0) return;
+  const awake = form === 'awake';
+  p.cd.suona = (awake ? 1.9 : 1.35) / p.atkMul;
+  const range = awake ? 380 : (250 + lv * 16);
+  const arc = awake ? 1.2 : 0.8;
+  G.cones.push({ x: p.x, y: p.y, ang: aim, range, arc, life: 0.35, max: 0.35 });
+  ring(p.x, p.y, range * 0.5, '#ffe0a8', 0.4, 3);
+  for (const e of G.enemies) {
+    if (!e.alive) continue;
+    const d = dist(p.x, p.y, e.x, e.y);
+    if (d > range) continue;
+    let da = Math.atan2(e.y - p.y, e.x - p.x) - aim;
+    while (da > Math.PI) da -= TAU;
+    while (da < -Math.PI) da += TAU;
+    if (Math.abs(da) < arc / 2) {
+      damageEnemy(e, dmg * (awake ? 1.3 : 1), { knock: 300, fromX: p.x, fromY: p.y });
+    }
+  }
+  if (awake) {
+    for (let i = 0; i < 6; i++) {
+      const a = aim + (i - 2.5) * 0.22;
+      G.shots.push({ type: 'bird', x: p.x, y: p.y, vx: Math.cos(a) * 420, vy: Math.sin(a) * 420, dmg: dmg * 0.8, life: 1.6, rot: a, hitSet: new Set(), pierce: 2 });
+    }
+  }
+  Sound.sword();
+}
+
+/* 纸马 */
+function updateHorse(dt, lv, form) {
+  const p = G.player;
+  const aim = (p.aim !== undefined ? p.aim : 0);
+  const dmg = 26 * (1 + (lv - 1) * 0.16) * p.dmgMul;
+  p.cd.horse = (p.cd.horse || 0) - dt;
+  if (p.cd.horse > 0) return;
+
+  if (form === 'awake') {
+    // 万马奔腾：整队冲锋
+    p.cd.horse = 2.0 / p.atkMul;
+    for (let i = 0; i < 8; i++) {
+      const back = 90 + i * 42;
+      G.shots.push({
+        type: 'horse', x: p.x - Math.cos(aim) * back + Math.cos(aim + Math.PI / 2) * (i % 2 ? 26 : -26),
+        y: p.y - Math.sin(aim) * back + Math.sin(aim + Math.PI / 2) * (i % 2 ? 26 : -26),
+        vx: Math.cos(aim) * (620 + i * 10), vy: Math.sin(aim) * (620 + i * 10),
+        dmg: dmg * 1.1, pierce: 99, life: 1.6, rot: aim, hitSet: new Set()
+      });
+    }
+    shake(5); Sound.boom();
+    return;
+  }
+  if (form === 'mutate') {
+    // 阴兵过境：列队慢行
+    p.cd.horse = 3.2 / p.atkMul;
+    for (let i = 0; i < 5; i++) {
+      G.shots.push({
+        type: 'horse', x: p.x - Math.cos(aim) * 260 + Math.cos(aim + Math.PI / 2) * (i - 2) * 46,
+        y: p.y - Math.sin(aim) * 260 + Math.sin(aim + Math.PI / 2) * (i - 2) * 46,
+        vx: Math.cos(aim) * 150, vy: Math.sin(aim) * 150,
+        dmg: dmg * 0.9, pierce: 99, life: 3.2, rot: aim, hitSet: new Set(), ghost: true
+      });
+    }
+    Sound.boss();
+    return;
+  }
+  p.cd.horse = 1.25 / p.atkMul;
+  G.shots.push({
+    type: 'horse', x: p.x, y: p.y, vx: Math.cos(aim) * 560, vy: Math.sin(aim) * 560,
+    dmg, pierce: 2 + lv, life: 1.3, rot: aim, hitSet: new Set()
+  });
+  Sound.sword();
+}
+
 function updateWeapons(dt) {
   const p = G.player;
   p.cd = p.cd || {};
@@ -1307,6 +1652,11 @@ function updateWeapons(dt) {
     }
   }
 
+  if (wLevel('ink') > 0) updateInk(dt, wLevel('ink'), awForm('ink'));
+  if (wLevel('coin') > 0) updateCoin(dt, wLevel('coin'), awForm('coin'));
+  if (wLevel('gourd') > 0) updateGourd(dt, wLevel('gourd'), awForm('gourd'));
+  if (wLevel('suona') > 0) updateSuona(dt, wLevel('suona'), awForm('suona'));
+  if (wLevel('horse') > 0) updateHorse(dt, wLevel('horse'), awForm('horse'));
   if (wLevel('compass') > 0) updateCompass(dt, wLevel('compass'), awForm('compass'));
   if (wLevel('umbrella') > 0) updateUmbrella(dt, wLevel('umbrella'), awForm('umbrella'));
   if (wLevel('mirror') > 0) updateMirror(dt, wLevel('mirror'), awForm('mirror'));
@@ -1408,6 +1758,8 @@ function updateEnemies(dt) {
     if (e.mirCd > 0) e.mirCd -= dt;
     if (e.needleCd > 0) e.needleCd -= dt;
     if (e.dragonCd > 0) e.dragonCd -= dt;
+    if (e.coinCd > 0) e.coinCd -= dt;
+    if (e.inkCd > 0) e.inkCd -= dt;
     if (e.burn > 0) {
       e.burn -= dt;
       e.burnTick -= dt;
@@ -1570,6 +1922,154 @@ function updateShots(dt) {
           hitArea(s.x, s.y, s.radius, s.dmg, { knock: 150 });
         }
       }
+    } else if (s.type === 'coin') {
+      s.x += s.vx * dt; s.y += s.vy * dt; s.rot += dt * 18;
+      for (const e of G.enemies) {
+        if (!e.alive || s.hitSet.has(e)) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + 11) * (e.r + 11)) {
+          s.hitSet.add(e);
+          damageEnemy(e, s.dmg, { knock: 100, fromX: s.x, fromY: s.y });
+          burst(s.x, s.y, 4, '#ffd76b', { spd: 200, size: 2.2, life: 0.25 });
+          s.bounces--;
+          if (s.bounces <= 0) { s.alive = false; break; }
+          // 弹向最近的、还没打过的敌人
+          let best = null, bd = 260 * 260;
+          for (const o of G.enemies) {
+            if (!o.alive || s.hitSet.has(o)) continue;
+            const d2v = dist2(s.x, s.y, o.x, o.y);
+            if (d2v < bd) { bd = d2v; best = o; }
+          }
+          if (best) {
+            const a = Math.atan2(best.y - s.y, best.x - s.x);
+            const sp = Math.hypot(s.vx, s.vy) || 520;
+            s.vx = Math.cos(a) * sp; s.vy = Math.sin(a) * sp;
+          } else { s.alive = false; }
+          break;
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'horse' || s.type === 'bird') {
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      if (!s.hitSet) s.hitSet = new Set();
+      for (const e of G.enemies) {
+        if (!e.alive || s.hitSet.has(e)) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + (s.type === 'horse' ? 26 : 14)) * (e.r + (s.type === 'horse' ? 26 : 14))) {
+          s.hitSet.add(e);
+          damageEnemy(e, s.dmg, { knock: s.type === 'horse' ? 260 : 90, fromX: s.x, fromY: s.y });
+          if (s.ghost) { e.slow = 0.55; e.slowT = 1.2; }
+          s.pierce--;
+          if (s.pierce <= 0) { s.alive = false; break; }
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'inkdragon') {
+      s.t += dt;
+      s.ang += Math.sin(s.t * 5.5) * 2.6 * dt;
+      s.x += Math.cos(s.ang) * 420 * dt;
+      s.y += Math.sin(s.ang) * 420 * dt;
+      s.trail.push({ x: s.x, y: s.y });
+      if (s.trail.length > 30) s.trail.shift();
+      for (const e of G.enemies) {
+        if (!e.alive || e.inkCd > 0) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + s.radius) * (e.r + s.radius)) {
+          e.inkCd = 0.3;
+          damageEnemy(e, s.dmg, { knock: 180, fromX: s.x, fromY: s.y });
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'coin') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      const cg = ctx.createLinearGradient(-9, -9, 9, 9);
+      cg.addColorStop(0, '#ffe9a8');
+      cg.addColorStop(0.5, '#e8b64a');
+      cg.addColorStop(1, '#a8761e');
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(90,60,10,0.8)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.fillStyle = '#3a2a10';
+      ctx.fillRect(-3, -3, 6, 6);
+      ctx.restore();
+    } else if (s.type === 'horse') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      ctx.scale(s.ghost ? 1.5 : 1.35);
+      ctx.globalAlpha = s.ghost ? 0.8 : 1;
+      ctx.fillStyle = s.ghost ? 'rgba(200,215,235,0.9)' : 'rgba(246,240,220,0.95)';
+      // 马身
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 22, 9, 0, 0, TAU);
+      ctx.fill();
+      // 头颈
+      ctx.beginPath();
+      ctx.moveTo(16, -2);
+      ctx.quadraticCurveTo(28, -14, 30, -4);
+      ctx.quadraticCurveTo(26, 0, 22, 2);
+      ctx.closePath();
+      ctx.fill();
+      // 腿
+      ctx.strokeStyle = s.ghost ? 'rgba(190,205,225,0.85)' : 'rgba(220,210,185,0.95)';
+      ctx.lineWidth = 2.4;
+      for (const lx of [-12, -4, 6, 14]) {
+        const swing = Math.sin(t * 22 + lx) * 5;
+        ctx.beginPath();
+        ctx.moveTo(lx, 6);
+        ctx.lineTo(lx + swing, 18);
+        ctx.stroke();
+      }
+      // 尾
+      ctx.beginPath();
+      ctx.moveTo(-20, -2);
+      ctx.quadraticCurveTo(-32, -8, -30, 4);
+      ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    } else if (s.type === 'bird') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      const flap = Math.sin(t * 26) * 0.6;
+      ctx.fillStyle = 'rgba(255,246,220,0.95)';
+      ctx.beginPath();
+      ctx.moveTo(9, 0);
+      ctx.quadraticCurveTo(0, -9 * (0.6 + flap * 0.4), -9, -3);
+      ctx.quadraticCurveTo(0, 0, -9, 3);
+      ctx.quadraticCurveTo(0, 9 * (0.6 + flap * 0.4), 9, 0);
+      ctx.fill();
+      ctx.restore();
+    } else if (s.type === 'inkdragon') {
+      const tr = s.trail;
+      if (tr.length > 3) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (let i = 1; i < tr.length; i++) {
+          const k = i / tr.length;
+          ctx.strokeStyle = `rgba(24,24,32,${0.35 + 0.6 * k})`;
+          ctx.lineWidth = 6 + 26 * k;
+          ctx.beginPath();
+          ctx.moveTo(tr[i - 1].x, tr[i - 1].y);
+          ctx.lineTo(tr[i].x, tr[i].y);
+          ctx.stroke();
+        }
+        // 白边
+        ctx.strokeStyle = 'rgba(210,220,240,0.35)';
+        ctx.lineWidth = 2;
+        const h = tr[tr.length - 1];
+        ctx.beginPath(); ctx.arc(h.x, h.y, 16, 0, TAU); ctx.stroke();
+        // 龙头（墨色）
+        ctx.fillStyle = 'rgba(24,24,32,0.95)';
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, 20, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = '#ff6a4a';
+        ctx.beginPath(); ctx.arc(h.x + 6, h.y - 5, 3, 0, TAU); ctx.arc(h.x + 6, h.y + 5, 3, 0, TAU); ctx.fill();
+        ctx.restore();
+      }
     } else if (s.type === 'lance') {
       s.x += s.vx * dt; s.y += s.vy * dt;
       if (!s.hitSet) s.hitSet = new Set();
@@ -1623,6 +2123,154 @@ function updateShots(dt) {
         }
       }
       if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'coin') {
+      s.x += s.vx * dt; s.y += s.vy * dt; s.rot += dt * 18;
+      for (const e of G.enemies) {
+        if (!e.alive || s.hitSet.has(e)) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + 11) * (e.r + 11)) {
+          s.hitSet.add(e);
+          damageEnemy(e, s.dmg, { knock: 100, fromX: s.x, fromY: s.y });
+          burst(s.x, s.y, 4, '#ffd76b', { spd: 200, size: 2.2, life: 0.25 });
+          s.bounces--;
+          if (s.bounces <= 0) { s.alive = false; break; }
+          // 弹向最近的、还没打过的敌人
+          let best = null, bd = 260 * 260;
+          for (const o of G.enemies) {
+            if (!o.alive || s.hitSet.has(o)) continue;
+            const d2v = dist2(s.x, s.y, o.x, o.y);
+            if (d2v < bd) { bd = d2v; best = o; }
+          }
+          if (best) {
+            const a = Math.atan2(best.y - s.y, best.x - s.x);
+            const sp = Math.hypot(s.vx, s.vy) || 520;
+            s.vx = Math.cos(a) * sp; s.vy = Math.sin(a) * sp;
+          } else { s.alive = false; }
+          break;
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'horse' || s.type === 'bird') {
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      if (!s.hitSet) s.hitSet = new Set();
+      for (const e of G.enemies) {
+        if (!e.alive || s.hitSet.has(e)) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + (s.type === 'horse' ? 26 : 14)) * (e.r + (s.type === 'horse' ? 26 : 14))) {
+          s.hitSet.add(e);
+          damageEnemy(e, s.dmg, { knock: s.type === 'horse' ? 260 : 90, fromX: s.x, fromY: s.y });
+          if (s.ghost) { e.slow = 0.55; e.slowT = 1.2; }
+          s.pierce--;
+          if (s.pierce <= 0) { s.alive = false; break; }
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'inkdragon') {
+      s.t += dt;
+      s.ang += Math.sin(s.t * 5.5) * 2.6 * dt;
+      s.x += Math.cos(s.ang) * 420 * dt;
+      s.y += Math.sin(s.ang) * 420 * dt;
+      s.trail.push({ x: s.x, y: s.y });
+      if (s.trail.length > 30) s.trail.shift();
+      for (const e of G.enemies) {
+        if (!e.alive || e.inkCd > 0) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + s.radius) * (e.r + s.radius)) {
+          e.inkCd = 0.3;
+          damageEnemy(e, s.dmg, { knock: 180, fromX: s.x, fromY: s.y });
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'coin') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      const cg = ctx.createLinearGradient(-9, -9, 9, 9);
+      cg.addColorStop(0, '#ffe9a8');
+      cg.addColorStop(0.5, '#e8b64a');
+      cg.addColorStop(1, '#a8761e');
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(90,60,10,0.8)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.fillStyle = '#3a2a10';
+      ctx.fillRect(-3, -3, 6, 6);
+      ctx.restore();
+    } else if (s.type === 'horse') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      ctx.scale(s.ghost ? 1.5 : 1.35);
+      ctx.globalAlpha = s.ghost ? 0.8 : 1;
+      ctx.fillStyle = s.ghost ? 'rgba(200,215,235,0.9)' : 'rgba(246,240,220,0.95)';
+      // 马身
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 22, 9, 0, 0, TAU);
+      ctx.fill();
+      // 头颈
+      ctx.beginPath();
+      ctx.moveTo(16, -2);
+      ctx.quadraticCurveTo(28, -14, 30, -4);
+      ctx.quadraticCurveTo(26, 0, 22, 2);
+      ctx.closePath();
+      ctx.fill();
+      // 腿
+      ctx.strokeStyle = s.ghost ? 'rgba(190,205,225,0.85)' : 'rgba(220,210,185,0.95)';
+      ctx.lineWidth = 2.4;
+      for (const lx of [-12, -4, 6, 14]) {
+        const swing = Math.sin(t * 22 + lx) * 5;
+        ctx.beginPath();
+        ctx.moveTo(lx, 6);
+        ctx.lineTo(lx + swing, 18);
+        ctx.stroke();
+      }
+      // 尾
+      ctx.beginPath();
+      ctx.moveTo(-20, -2);
+      ctx.quadraticCurveTo(-32, -8, -30, 4);
+      ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    } else if (s.type === 'bird') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      const flap = Math.sin(t * 26) * 0.6;
+      ctx.fillStyle = 'rgba(255,246,220,0.95)';
+      ctx.beginPath();
+      ctx.moveTo(9, 0);
+      ctx.quadraticCurveTo(0, -9 * (0.6 + flap * 0.4), -9, -3);
+      ctx.quadraticCurveTo(0, 0, -9, 3);
+      ctx.quadraticCurveTo(0, 9 * (0.6 + flap * 0.4), 9, 0);
+      ctx.fill();
+      ctx.restore();
+    } else if (s.type === 'inkdragon') {
+      const tr = s.trail;
+      if (tr.length > 3) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (let i = 1; i < tr.length; i++) {
+          const k = i / tr.length;
+          ctx.strokeStyle = `rgba(24,24,32,${0.35 + 0.6 * k})`;
+          ctx.lineWidth = 6 + 26 * k;
+          ctx.beginPath();
+          ctx.moveTo(tr[i - 1].x, tr[i - 1].y);
+          ctx.lineTo(tr[i].x, tr[i].y);
+          ctx.stroke();
+        }
+        // 白边
+        ctx.strokeStyle = 'rgba(210,220,240,0.35)';
+        ctx.lineWidth = 2;
+        const h = tr[tr.length - 1];
+        ctx.beginPath(); ctx.arc(h.x, h.y, 16, 0, TAU); ctx.stroke();
+        // 龙头（墨色）
+        ctx.fillStyle = 'rgba(24,24,32,0.95)';
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, 20, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = '#ff6a4a';
+        ctx.beginPath(); ctx.arc(h.x + 6, h.y - 5, 3, 0, TAU); ctx.arc(h.x + 6, h.y + 5, 3, 0, TAU); ctx.fill();
+        ctx.restore();
+      }
     } else if (s.type === 'lance') {
       ctx.save();
       ctx.translate(s.x, s.y);
@@ -1915,6 +2563,12 @@ function updateWorld(dt) {
   for (const sr of G.sealRings) { sr.life -= dt; sr.r = sr.rMax * (1 - sr.life / sr.max); }
   compact(G.sealRings, sr => sr.life > 0);
 
+  for (const l of G.lines) l.life -= dt;
+  compact(G.lines, l => l.life > 0);
+  for (const v of G.vortices) v.life -= dt;
+  compact(G.vortices, v => v.life > 0);
+  for (const c of G.chains) c.life -= dt;
+  compact(G.chains, c => c.life > 0);
   for (const b of G.beams) b.life -= dt;
   compact(G.beams, b => b.life > 0);
   for (const r of G.ringFx) r.life -= dt;
@@ -1945,6 +2599,12 @@ function updateWorld(dt) {
   for (const sr of G.sealRings) { sr.life -= dt; sr.r = sr.rMax * (1 - sr.life / sr.max); }
   compact(G.sealRings, sr => sr.life > 0);
 
+  for (const l of G.lines) l.life -= dt;
+  compact(G.lines, l => l.life > 0);
+  for (const v of G.vortices) v.life -= dt;
+  compact(G.vortices, v => v.life > 0);
+  for (const c of G.chains) c.life -= dt;
+  compact(G.chains, c => c.life > 0);
   for (const b of G.beams) b.life -= dt;
   compact(G.beams, b => b.life > 0);
   for (const r of G.ringFx) r.life -= dt;
@@ -2326,6 +2986,92 @@ function drawSealRings() {
   ctx.textAlign = 'left';
 }
 
+function drawChains(t) {
+  for (const c of G.chains) {
+    const k = c.life / c.max;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, k * 1.5);
+    // 贝塞尔曲线链
+    const seg = 16;
+    const pts = [];
+    for (let i = 0; i <= seg; i++) {
+      const u = i / seg;
+      const x = (1 - u) * (1 - u) * c.x1 + 2 * (1 - u) * u * c.cx + u * u * c.x2;
+      const y = (1 - u) * (1 - u) * c.y1 + 2 * (1 - u) * u * c.cy + u * u * c.y2;
+      const jitter = Math.sin(u * 34 + t * 40) * 3;
+      pts.push([x + jitter, y - jitter]);
+    }
+    // 外发光
+    ctx.strokeStyle = 'rgba(255,150,90,0.30)';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    pts.forEach((pt, i) => i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]));
+    ctx.stroke();
+    // 链节
+    for (let i = 2; i < pts.length; i += 1) {
+      const [x, y] = pts[i];
+      ctx.fillStyle = i % 2 ? 'rgba(255,226,170,0.95)' : 'rgba(255,180,110,0.9)';
+      ctx.beginPath();
+      ctx.ellipse(x, y, 4.4, 2.4, Math.atan2(y - pts[i - 1][1], x - pts[i - 1][0]), 0, TAU);
+      ctx.fill();
+    }
+    // 芯线
+    ctx.strokeStyle = 'rgba(255,240,210,0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    pts.forEach((pt, i) => i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]));
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawInkLines(t) {
+  for (const l of G.lines) {
+    const k = l.life / l.max;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, k * 1.6);
+    // 墨迹主体
+    // 外发光
+    ctx.strokeStyle = 'rgba(150,200,255,0.22)';
+    ctx.lineWidth = l.w * 1.8;
+    ctx.beginPath(); ctx.moveTo(l.x1, l.y1); ctx.lineTo(l.x2, l.y2); ctx.stroke();
+    // 墨身
+    ctx.strokeStyle = 'rgba(26,32,48,0.95)';
+    ctx.lineWidth = l.w;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(l.x1, l.y1); ctx.lineTo(l.x2, l.y2); ctx.stroke();
+    // 边缘飞白（银亮边，暗底才看得见）
+    ctx.strokeStyle = 'rgba(190,215,255,0.85)';
+    ctx.lineWidth = Math.max(2, l.w * 0.22);
+    ctx.beginPath(); ctx.moveTo(l.x1, l.y1); ctx.lineTo(l.x2, l.y2); ctx.stroke();
+    // 收墨亮点
+    ctx.fillStyle = 'rgba(240,240,255,0.9)';
+    const mx = (l.x1 + l.x2) / 2, my = (l.y1 + l.y2) / 2;
+    ctx.beginPath(); ctx.arc(mx, my, 2.2, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawVortices(t) {
+    for (const v of G.vortices) {
+    const k = 1 - v.life / v.max;
+    ctx.save();
+    ctx.translate(v.x, v.y);
+    ctx.globalAlpha = (1 - k) * 0.9;
+    ctx.strokeStyle = v.awake ? 'rgba(150,240,180,0.85)' : 'rgba(180,220,160,0.7)';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(0, 0, v.r * (0.25 + i * 0.26) * (0.6 + k * 0.4), t * 3 + i, t * 3 + i + 4.4);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
 function drawBeams() {
   for (const b of G.beams) {
     const k = b.life / b.max;
@@ -2580,6 +3326,84 @@ function drawWeaponAuras(t) {
     ctx.restore();
     ctx.globalAlpha = 1;
     ctx.textAlign = 'left';
+  }
+
+  // 墨斗：纵横墨痕
+  if (wLevel('ink') > 0 && awForm('ink')) {
+    const mut = awForm('ink') === 'mutate';
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.globalAlpha = 0.20;
+    ctx.strokeStyle = mut ? 'rgba(40,40,50,0.9)' : 'rgba(30,30,40,0.8)';
+    ctx.lineWidth = 3;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath(); ctx.moveTo(i * 70, -150); ctx.lineTo(i * 70, 150); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-150, i * 70); ctx.lineTo(150, i * 70); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  // 铜钱剑：绕身钱轮
+  if (wLevel('coin') > 0 && awForm('coin')) {
+    const ang = p.coinAng || 0;
+    for (let i = 0; i < 12; i++) {
+      const a = ang + i / 12 * TAU;
+      const cx = p.x + Math.cos(a) * 86, cy = p.y + Math.sin(a) * 86 * 0.9;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(a);
+      ctx.fillStyle = 'rgba(255,226,150,0.9)';
+      ctx.beginPath(); ctx.arc(0, 0, 6, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(60,40,10,0.9)';
+      ctx.fillRect(-2, -2, 4, 4);
+      ctx.restore();
+    }
+  }
+
+  // 葫芦：吸星漩涡
+  if (wLevel('gourd') > 0 && awForm('gourd')) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = 'rgba(150,240,180,0.7)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(0, 0, 60 + i * 40 + Math.sin(t * 3 + i) * 8, t * 2 + i, t * 2 + i + 4.2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  // 唢呐：声纹
+  if (wLevel('suona') > 0 && awForm('suona')) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = 'rgba(255,220,150,0.8)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      const rr = 40 + ((t * 90 + i * 40) % 120);
+      ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  // 纸马：蹄影
+  if (wLevel('horse') > 0 && awForm('horse')) {
+    ctx.save();
+    ctx.translate(p.x, p.y + 20);
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = awForm('horse') === 'mutate' ? 'rgba(190,205,225,0.9)' : 'rgba(246,240,220,0.9)';
+    for (let i = 0; i < 3; i++) {
+      const off = ((t * 160 + i * 60) % 260) - 130;
+      ctx.beginPath(); ctx.ellipse(off, 0, 16, 6, 0, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
   }
 
   // 纸鸢：环绕纸鹤
@@ -3035,6 +3859,154 @@ function drawShots(t) {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(4, -3.4); ctx.lineTo(4, 3.4); ctx.closePath(); ctx.fill();
       ctx.restore();
+    } else if (s.type === 'coin') {
+      s.x += s.vx * dt; s.y += s.vy * dt; s.rot += dt * 18;
+      for (const e of G.enemies) {
+        if (!e.alive || s.hitSet.has(e)) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + 11) * (e.r + 11)) {
+          s.hitSet.add(e);
+          damageEnemy(e, s.dmg, { knock: 100, fromX: s.x, fromY: s.y });
+          burst(s.x, s.y, 4, '#ffd76b', { spd: 200, size: 2.2, life: 0.25 });
+          s.bounces--;
+          if (s.bounces <= 0) { s.alive = false; break; }
+          // 弹向最近的、还没打过的敌人
+          let best = null, bd = 260 * 260;
+          for (const o of G.enemies) {
+            if (!o.alive || s.hitSet.has(o)) continue;
+            const d2v = dist2(s.x, s.y, o.x, o.y);
+            if (d2v < bd) { bd = d2v; best = o; }
+          }
+          if (best) {
+            const a = Math.atan2(best.y - s.y, best.x - s.x);
+            const sp = Math.hypot(s.vx, s.vy) || 520;
+            s.vx = Math.cos(a) * sp; s.vy = Math.sin(a) * sp;
+          } else { s.alive = false; }
+          break;
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'horse' || s.type === 'bird') {
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      if (!s.hitSet) s.hitSet = new Set();
+      for (const e of G.enemies) {
+        if (!e.alive || s.hitSet.has(e)) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + (s.type === 'horse' ? 26 : 14)) * (e.r + (s.type === 'horse' ? 26 : 14))) {
+          s.hitSet.add(e);
+          damageEnemy(e, s.dmg, { knock: s.type === 'horse' ? 260 : 90, fromX: s.x, fromY: s.y });
+          if (s.ghost) { e.slow = 0.55; e.slowT = 1.2; }
+          s.pierce--;
+          if (s.pierce <= 0) { s.alive = false; break; }
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'inkdragon') {
+      s.t += dt;
+      s.ang += Math.sin(s.t * 5.5) * 2.6 * dt;
+      s.x += Math.cos(s.ang) * 420 * dt;
+      s.y += Math.sin(s.ang) * 420 * dt;
+      s.trail.push({ x: s.x, y: s.y });
+      if (s.trail.length > 30) s.trail.shift();
+      for (const e of G.enemies) {
+        if (!e.alive || e.inkCd > 0) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + s.radius) * (e.r + s.radius)) {
+          e.inkCd = 0.3;
+          damageEnemy(e, s.dmg, { knock: 180, fromX: s.x, fromY: s.y });
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'coin') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      const cg = ctx.createLinearGradient(-9, -9, 9, 9);
+      cg.addColorStop(0, '#ffe9a8');
+      cg.addColorStop(0.5, '#e8b64a');
+      cg.addColorStop(1, '#a8761e');
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(90,60,10,0.8)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.fillStyle = '#3a2a10';
+      ctx.fillRect(-3, -3, 6, 6);
+      ctx.restore();
+    } else if (s.type === 'horse') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      ctx.scale(s.ghost ? 1.5 : 1.35);
+      ctx.globalAlpha = s.ghost ? 0.8 : 1;
+      ctx.fillStyle = s.ghost ? 'rgba(200,215,235,0.9)' : 'rgba(246,240,220,0.95)';
+      // 马身
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 22, 9, 0, 0, TAU);
+      ctx.fill();
+      // 头颈
+      ctx.beginPath();
+      ctx.moveTo(16, -2);
+      ctx.quadraticCurveTo(28, -14, 30, -4);
+      ctx.quadraticCurveTo(26, 0, 22, 2);
+      ctx.closePath();
+      ctx.fill();
+      // 腿
+      ctx.strokeStyle = s.ghost ? 'rgba(190,205,225,0.85)' : 'rgba(220,210,185,0.95)';
+      ctx.lineWidth = 2.4;
+      for (const lx of [-12, -4, 6, 14]) {
+        const swing = Math.sin(t * 22 + lx) * 5;
+        ctx.beginPath();
+        ctx.moveTo(lx, 6);
+        ctx.lineTo(lx + swing, 18);
+        ctx.stroke();
+      }
+      // 尾
+      ctx.beginPath();
+      ctx.moveTo(-20, -2);
+      ctx.quadraticCurveTo(-32, -8, -30, 4);
+      ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    } else if (s.type === 'bird') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      const flap = Math.sin(t * 26) * 0.6;
+      ctx.fillStyle = 'rgba(255,246,220,0.95)';
+      ctx.beginPath();
+      ctx.moveTo(9, 0);
+      ctx.quadraticCurveTo(0, -9 * (0.6 + flap * 0.4), -9, -3);
+      ctx.quadraticCurveTo(0, 0, -9, 3);
+      ctx.quadraticCurveTo(0, 9 * (0.6 + flap * 0.4), 9, 0);
+      ctx.fill();
+      ctx.restore();
+    } else if (s.type === 'inkdragon') {
+      const tr = s.trail;
+      if (tr.length > 3) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (let i = 1; i < tr.length; i++) {
+          const k = i / tr.length;
+          ctx.strokeStyle = `rgba(24,24,32,${0.35 + 0.6 * k})`;
+          ctx.lineWidth = 6 + 26 * k;
+          ctx.beginPath();
+          ctx.moveTo(tr[i - 1].x, tr[i - 1].y);
+          ctx.lineTo(tr[i].x, tr[i].y);
+          ctx.stroke();
+        }
+        // 白边
+        ctx.strokeStyle = 'rgba(210,220,240,0.35)';
+        ctx.lineWidth = 2;
+        const h = tr[tr.length - 1];
+        ctx.beginPath(); ctx.arc(h.x, h.y, 16, 0, TAU); ctx.stroke();
+        // 龙头（墨色）
+        ctx.fillStyle = 'rgba(24,24,32,0.95)';
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, 20, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = '#ff6a4a';
+        ctx.beginPath(); ctx.arc(h.x + 6, h.y - 5, 3, 0, TAU); ctx.arc(h.x + 6, h.y + 5, 3, 0, TAU); ctx.fill();
+        ctx.restore();
+      }
     } else if (s.type === 'lance') {
       ctx.save();
       ctx.translate(s.x, s.y);
@@ -3122,6 +4094,154 @@ function drawShots(t) {
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(13, 0); ctx.stroke();
       ctx.restore();
+    } else if (s.type === 'coin') {
+      s.x += s.vx * dt; s.y += s.vy * dt; s.rot += dt * 18;
+      for (const e of G.enemies) {
+        if (!e.alive || s.hitSet.has(e)) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + 11) * (e.r + 11)) {
+          s.hitSet.add(e);
+          damageEnemy(e, s.dmg, { knock: 100, fromX: s.x, fromY: s.y });
+          burst(s.x, s.y, 4, '#ffd76b', { spd: 200, size: 2.2, life: 0.25 });
+          s.bounces--;
+          if (s.bounces <= 0) { s.alive = false; break; }
+          // 弹向最近的、还没打过的敌人
+          let best = null, bd = 260 * 260;
+          for (const o of G.enemies) {
+            if (!o.alive || s.hitSet.has(o)) continue;
+            const d2v = dist2(s.x, s.y, o.x, o.y);
+            if (d2v < bd) { bd = d2v; best = o; }
+          }
+          if (best) {
+            const a = Math.atan2(best.y - s.y, best.x - s.x);
+            const sp = Math.hypot(s.vx, s.vy) || 520;
+            s.vx = Math.cos(a) * sp; s.vy = Math.sin(a) * sp;
+          } else { s.alive = false; }
+          break;
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'horse' || s.type === 'bird') {
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      if (!s.hitSet) s.hitSet = new Set();
+      for (const e of G.enemies) {
+        if (!e.alive || s.hitSet.has(e)) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + (s.type === 'horse' ? 26 : 14)) * (e.r + (s.type === 'horse' ? 26 : 14))) {
+          s.hitSet.add(e);
+          damageEnemy(e, s.dmg, { knock: s.type === 'horse' ? 260 : 90, fromX: s.x, fromY: s.y });
+          if (s.ghost) { e.slow = 0.55; e.slowT = 1.2; }
+          s.pierce--;
+          if (s.pierce <= 0) { s.alive = false; break; }
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'inkdragon') {
+      s.t += dt;
+      s.ang += Math.sin(s.t * 5.5) * 2.6 * dt;
+      s.x += Math.cos(s.ang) * 420 * dt;
+      s.y += Math.sin(s.ang) * 420 * dt;
+      s.trail.push({ x: s.x, y: s.y });
+      if (s.trail.length > 30) s.trail.shift();
+      for (const e of G.enemies) {
+        if (!e.alive || e.inkCd > 0) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + s.radius) * (e.r + s.radius)) {
+          e.inkCd = 0.3;
+          damageEnemy(e, s.dmg, { knock: 180, fromX: s.x, fromY: s.y });
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'coin') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      const cg = ctx.createLinearGradient(-9, -9, 9, 9);
+      cg.addColorStop(0, '#ffe9a8');
+      cg.addColorStop(0.5, '#e8b64a');
+      cg.addColorStop(1, '#a8761e');
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(90,60,10,0.8)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.fillStyle = '#3a2a10';
+      ctx.fillRect(-3, -3, 6, 6);
+      ctx.restore();
+    } else if (s.type === 'horse') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      ctx.scale(s.ghost ? 1.5 : 1.35);
+      ctx.globalAlpha = s.ghost ? 0.8 : 1;
+      ctx.fillStyle = s.ghost ? 'rgba(200,215,235,0.9)' : 'rgba(246,240,220,0.95)';
+      // 马身
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 22, 9, 0, 0, TAU);
+      ctx.fill();
+      // 头颈
+      ctx.beginPath();
+      ctx.moveTo(16, -2);
+      ctx.quadraticCurveTo(28, -14, 30, -4);
+      ctx.quadraticCurveTo(26, 0, 22, 2);
+      ctx.closePath();
+      ctx.fill();
+      // 腿
+      ctx.strokeStyle = s.ghost ? 'rgba(190,205,225,0.85)' : 'rgba(220,210,185,0.95)';
+      ctx.lineWidth = 2.4;
+      for (const lx of [-12, -4, 6, 14]) {
+        const swing = Math.sin(t * 22 + lx) * 5;
+        ctx.beginPath();
+        ctx.moveTo(lx, 6);
+        ctx.lineTo(lx + swing, 18);
+        ctx.stroke();
+      }
+      // 尾
+      ctx.beginPath();
+      ctx.moveTo(-20, -2);
+      ctx.quadraticCurveTo(-32, -8, -30, 4);
+      ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    } else if (s.type === 'bird') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      const flap = Math.sin(t * 26) * 0.6;
+      ctx.fillStyle = 'rgba(255,246,220,0.95)';
+      ctx.beginPath();
+      ctx.moveTo(9, 0);
+      ctx.quadraticCurveTo(0, -9 * (0.6 + flap * 0.4), -9, -3);
+      ctx.quadraticCurveTo(0, 0, -9, 3);
+      ctx.quadraticCurveTo(0, 9 * (0.6 + flap * 0.4), 9, 0);
+      ctx.fill();
+      ctx.restore();
+    } else if (s.type === 'inkdragon') {
+      const tr = s.trail;
+      if (tr.length > 3) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (let i = 1; i < tr.length; i++) {
+          const k = i / tr.length;
+          ctx.strokeStyle = `rgba(24,24,32,${0.35 + 0.6 * k})`;
+          ctx.lineWidth = 6 + 26 * k;
+          ctx.beginPath();
+          ctx.moveTo(tr[i - 1].x, tr[i - 1].y);
+          ctx.lineTo(tr[i].x, tr[i].y);
+          ctx.stroke();
+        }
+        // 白边
+        ctx.strokeStyle = 'rgba(210,220,240,0.35)';
+        ctx.lineWidth = 2;
+        const h = tr[tr.length - 1];
+        ctx.beginPath(); ctx.arc(h.x, h.y, 16, 0, TAU); ctx.stroke();
+        // 龙头（墨色）
+        ctx.fillStyle = 'rgba(24,24,32,0.95)';
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, 20, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = '#ff6a4a';
+        ctx.beginPath(); ctx.arc(h.x + 6, h.y - 5, 3, 0, TAU); ctx.arc(h.x + 6, h.y + 5, 3, 0, TAU); ctx.fill();
+        ctx.restore();
+      }
     } else if (s.type === 'lance') {
       s.x += s.vx * dt; s.y += s.vy * dt;
       if (!s.hitSet) s.hitSet = new Set();
@@ -3209,6 +4329,154 @@ function drawShots(t) {
       }
       ctx.globalAlpha = 1;
       ctx.restore();
+    } else if (s.type === 'coin') {
+      s.x += s.vx * dt; s.y += s.vy * dt; s.rot += dt * 18;
+      for (const e of G.enemies) {
+        if (!e.alive || s.hitSet.has(e)) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + 11) * (e.r + 11)) {
+          s.hitSet.add(e);
+          damageEnemy(e, s.dmg, { knock: 100, fromX: s.x, fromY: s.y });
+          burst(s.x, s.y, 4, '#ffd76b', { spd: 200, size: 2.2, life: 0.25 });
+          s.bounces--;
+          if (s.bounces <= 0) { s.alive = false; break; }
+          // 弹向最近的、还没打过的敌人
+          let best = null, bd = 260 * 260;
+          for (const o of G.enemies) {
+            if (!o.alive || s.hitSet.has(o)) continue;
+            const d2v = dist2(s.x, s.y, o.x, o.y);
+            if (d2v < bd) { bd = d2v; best = o; }
+          }
+          if (best) {
+            const a = Math.atan2(best.y - s.y, best.x - s.x);
+            const sp = Math.hypot(s.vx, s.vy) || 520;
+            s.vx = Math.cos(a) * sp; s.vy = Math.sin(a) * sp;
+          } else { s.alive = false; }
+          break;
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'horse' || s.type === 'bird') {
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      if (!s.hitSet) s.hitSet = new Set();
+      for (const e of G.enemies) {
+        if (!e.alive || s.hitSet.has(e)) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + (s.type === 'horse' ? 26 : 14)) * (e.r + (s.type === 'horse' ? 26 : 14))) {
+          s.hitSet.add(e);
+          damageEnemy(e, s.dmg, { knock: s.type === 'horse' ? 260 : 90, fromX: s.x, fromY: s.y });
+          if (s.ghost) { e.slow = 0.55; e.slowT = 1.2; }
+          s.pierce--;
+          if (s.pierce <= 0) { s.alive = false; break; }
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'inkdragon') {
+      s.t += dt;
+      s.ang += Math.sin(s.t * 5.5) * 2.6 * dt;
+      s.x += Math.cos(s.ang) * 420 * dt;
+      s.y += Math.sin(s.ang) * 420 * dt;
+      s.trail.push({ x: s.x, y: s.y });
+      if (s.trail.length > 30) s.trail.shift();
+      for (const e of G.enemies) {
+        if (!e.alive || e.inkCd > 0) continue;
+        if (dist2(s.x, s.y, e.x, e.y) < (e.r + s.radius) * (e.r + s.radius)) {
+          e.inkCd = 0.3;
+          damageEnemy(e, s.dmg, { knock: 180, fromX: s.x, fromY: s.y });
+        }
+      }
+      if (s.life <= 0) s.alive = false;
+    } else if (s.type === 'coin') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      const cg = ctx.createLinearGradient(-9, -9, 9, 9);
+      cg.addColorStop(0, '#ffe9a8');
+      cg.addColorStop(0.5, '#e8b64a');
+      cg.addColorStop(1, '#a8761e');
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(90,60,10,0.8)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.fillStyle = '#3a2a10';
+      ctx.fillRect(-3, -3, 6, 6);
+      ctx.restore();
+    } else if (s.type === 'horse') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      ctx.scale(s.ghost ? 1.5 : 1.35);
+      ctx.globalAlpha = s.ghost ? 0.8 : 1;
+      ctx.fillStyle = s.ghost ? 'rgba(200,215,235,0.9)' : 'rgba(246,240,220,0.95)';
+      // 马身
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 22, 9, 0, 0, TAU);
+      ctx.fill();
+      // 头颈
+      ctx.beginPath();
+      ctx.moveTo(16, -2);
+      ctx.quadraticCurveTo(28, -14, 30, -4);
+      ctx.quadraticCurveTo(26, 0, 22, 2);
+      ctx.closePath();
+      ctx.fill();
+      // 腿
+      ctx.strokeStyle = s.ghost ? 'rgba(190,205,225,0.85)' : 'rgba(220,210,185,0.95)';
+      ctx.lineWidth = 2.4;
+      for (const lx of [-12, -4, 6, 14]) {
+        const swing = Math.sin(t * 22 + lx) * 5;
+        ctx.beginPath();
+        ctx.moveTo(lx, 6);
+        ctx.lineTo(lx + swing, 18);
+        ctx.stroke();
+      }
+      // 尾
+      ctx.beginPath();
+      ctx.moveTo(-20, -2);
+      ctx.quadraticCurveTo(-32, -8, -30, 4);
+      ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    } else if (s.type === 'bird') {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      const flap = Math.sin(t * 26) * 0.6;
+      ctx.fillStyle = 'rgba(255,246,220,0.95)';
+      ctx.beginPath();
+      ctx.moveTo(9, 0);
+      ctx.quadraticCurveTo(0, -9 * (0.6 + flap * 0.4), -9, -3);
+      ctx.quadraticCurveTo(0, 0, -9, 3);
+      ctx.quadraticCurveTo(0, 9 * (0.6 + flap * 0.4), 9, 0);
+      ctx.fill();
+      ctx.restore();
+    } else if (s.type === 'inkdragon') {
+      const tr = s.trail;
+      if (tr.length > 3) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (let i = 1; i < tr.length; i++) {
+          const k = i / tr.length;
+          ctx.strokeStyle = `rgba(24,24,32,${0.35 + 0.6 * k})`;
+          ctx.lineWidth = 6 + 26 * k;
+          ctx.beginPath();
+          ctx.moveTo(tr[i - 1].x, tr[i - 1].y);
+          ctx.lineTo(tr[i].x, tr[i].y);
+          ctx.stroke();
+        }
+        // 白边
+        ctx.strokeStyle = 'rgba(210,220,240,0.35)';
+        ctx.lineWidth = 2;
+        const h = tr[tr.length - 1];
+        ctx.beginPath(); ctx.arc(h.x, h.y, 16, 0, TAU); ctx.stroke();
+        // 龙头（墨色）
+        ctx.fillStyle = 'rgba(24,24,32,0.95)';
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, 20, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = '#ff6a4a';
+        ctx.beginPath(); ctx.arc(h.x + 6, h.y - 5, 3, 0, TAU); ctx.arc(h.x + 6, h.y + 5, 3, 0, TAU); ctx.fill();
+        ctx.restore();
+      }
     } else if (s.type === 'lance') {
       ctx.save();
       ctx.translate(s.x, s.y);
@@ -3967,6 +5235,9 @@ function render(t) {
 
   drawBladeFx(t);
   drawShots(t);
+  drawChains(t);
+  drawInkLines(t);
+  drawVortices(t);
   drawCones();
   drawBeams();
   drawRingFx();
@@ -4115,7 +5386,7 @@ const TUT_STEPS = [
 function startTutorial() {
   G.mode = 'tutorial';
   G.time = 0; G.kills = 0; G.depth = 1;
-  G.enemies = []; G.shots = []; G.orbs = []; G.parts = []; G.texts = []; G.rings = []; G.slashes = []; G.arcs = []; G.seals = []; G.cones = []; G.blades = []; G.bladeFx = []; G.sealRings = []; G.beams = []; G.ringFx = [];
+  G.enemies = []; G.shots = []; G.orbs = []; G.parts = []; G.texts = []; G.rings = []; G.slashes = []; G.arcs = []; G.seals = []; G.cones = []; G.blades = []; G.bladeFx = []; G.sealRings = []; G.beams = []; G.ringFx = []; G.lines = []; G.vortices = []; G.chains = [];
   G.spawnT = 0; G.bossT = 1e9; G.boss = null; G.shake = 0; G.flash = 0; G.hitstop = 0;
   G.player = newPlayer();
   G.player.hpMax = 400; G.player.hp = 400;
@@ -4201,7 +5472,7 @@ function updateTutorial(dt) {
 function startRun() {
   G.mode = 'play';
   G.time = 0; G.kills = 0; G.soulsRun = 0; G.depth = 1;
-  G.enemies = []; G.shots = []; G.orbs = []; G.parts = []; G.texts = []; G.rings = []; G.slashes = []; G.arcs = []; G.seals = []; G.cones = []; G.blades = []; G.bladeFx = []; G.sealRings = []; G.beams = []; G.ringFx = [];
+  G.enemies = []; G.shots = []; G.orbs = []; G.parts = []; G.texts = []; G.rings = []; G.slashes = []; G.arcs = []; G.seals = []; G.cones = []; G.blades = []; G.bladeFx = []; G.sealRings = []; G.beams = []; G.ringFx = []; G.lines = []; G.vortices = []; G.chains = [];
   G.spawnT = 0; G.bossT = 240; G.boss = null; G.bossCount = 0;
   G.combo = 0; G.comboT = 0; G.shake = 0; G.flash = 0; G.hitstop = 0;
   G.eliteT = 58;
@@ -4273,11 +5544,15 @@ function backHome() {
 /* ───────────────────────── 升级卡 ───────────────────────── */
 let currentCards = [];
 
+const MAX_WEAPONS = 5;
+
 function cardPool() {
   const p = G.player;
   const pool = [];
+  const ownedCount = Object.keys(p.weapons).length;
   for (const k in WEAPONS) {
     const lv = p.weapons[k] || 0;
+    if (lv === 0 && ownedCount >= MAX_WEAPONS) continue;  // 单局最多 5 种灯器
     if (lv < WEAPONS[k].max) pool.push({ kind: 'weapon', key: k, lv });
   }
   for (const k in PASSIVES) {
@@ -4595,7 +5870,7 @@ function renderStory() {
   // 灯器谱
   const S = window.STORY || {};
   let html = '<div class="story-article">';
-  const order = ['flame', 'talisman', 'sword', 'bell', 'kite', 'compass', 'umbrella', 'mirror'];
+  const order = ['flame', 'talisman', 'sword', 'bell', 'kite', 'compass', 'umbrella', 'mirror', 'ink', 'coin', 'gourd', 'suona', 'horse'];
   let unlockedAll = 0;
   order.forEach(key => {
     const w = WEAPONS[key];
