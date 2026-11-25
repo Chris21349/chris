@@ -272,7 +272,21 @@ kbd{display:inline-block;min-width:20px;padding:1px 5px;margin:0 1px;border:1px 
 .parry-badge .pb-k{display:block;font-size:9px;letter-spacing:.4em;color:rgba(178,123,255,.75)}
 .parry-badge .pb-n{display:block;font-size:12px;letter-spacing:.1em;color:#e2d4ff;margin-top:2px;text-shadow:0 0 14px rgba(178,123,255,.6)}
 .parry-badge .pb-m{display:block;font-size:10px;letter-spacing:.3em;color:rgba(200,170,255,.5);margin-top:3px}
+.parry-badge .pb-cd{display:block;width:86px;height:2px;margin:5px 0 0 auto;background:rgba(178,123,255,.18);overflow:hidden}
+.parry-badge .pb-cd i{display:block;height:100%;width:100%;transform-origin:right;background:linear-gradient(90deg,#b27bff,#7d5cff);
+  box-shadow:0 0 8px rgba(178,123,255,.7);transition:transform .1s linear}
 .parry-badge.pulse{animation:pbPulse .6s ease}
+.tb{position:relative}
+.tbcd{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-style:normal;font-size:10px;color:#ffb0c0;
+  font-family:ui-monospace,monospace;text-shadow:0 0 8px rgba(255,60,90,.8)}
+.tb-guard.cd span{color:#7c8792;text-shadow:none}
+#rotate{position:fixed;inset:0;z-index:90;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  background:rgba(3,6,10,.96);color:#cfe9f5;text-align:center}
+#rotate.on{display:flex}
+#rotate .rot{font-size:52px;color:#5ce9ff;animation:rotHint 2.2s ease-in-out infinite;text-shadow:0 0 24px rgba(92,233,255,.6)}
+@keyframes rotHint{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(78deg)}}
+#rotate p{font-size:14px;letter-spacing:.24em;color:#a9d6e6}
+#rotate button{font-size:12px;letter-spacing:.1em;color:#8fb8c8;border:1px solid rgba(120,190,215,.3);padding:9px 16px}
 @keyframes pbPulse{0%{transform:scale(1)}35%{transform:scale(1.18)}100%{transform:scale(1)}}
 
 .hint{position:absolute;left:50%;top:22%;transform:translate(-50%,-50%);font-size:12px;letter-spacing:.16em;
@@ -333,6 +347,32 @@ kbd{display:inline-block;min-width:20px;padding:1px 5px;margin:0 1px;border:1px 
 .tb-jump{width:clamp(44px,11.5vw,52px);height:clamp(44px,11.5vw,52px);right:clamp(70px,18vw,84px);bottom:clamp(72px,18vw,86px);opacity:.85}
 .tb-jump span,.tb-dash span{font-size:clamp(13px,3.4vw,16px)}
 
+/* 手机横屏：核心战斗形态 */
+body.touch-ui.landscape{
+  #hud{padding:calc(var(--safe-t) + 6px) 12px}
+  .hud-top{gap:8px}
+  .pbar{max-width:33vw}
+  .pname{font-size:11px}
+  .hud-center{width:64px}
+  .skillbar{right:158px;bottom:calc(var(--safe-b) + 8px);flex-direction:row;gap:5px}
+  .skit{width:40px;height:40px}
+  .skit .ic{font-size:16px}
+  .tbtns{right:8px;bottom:calc(var(--safe-b) + 6px);width:152px;height:152px}
+  .tb-attack{width:66px;height:66px;right:0;bottom:0}
+  .tb-attack span{font-size:22px}
+  .tb-guard{width:56px;height:56px;right:70px;bottom:2px}
+  .tb-dash{width:50px;height:50px;right:2px;bottom:70px}
+  .tb-jump{width:44px;height:44px;right:70px;bottom:62px}
+  .tb-dash span,.tb-jump span{font-size:13px}
+  .ultwrap{right:298px;bottom:calc(var(--safe-b) + 4px);width:56px;height:56px}
+  .stick{width:40vw;height:82vh}
+  .parry-badge{right:10px;top:calc(50% - 40px)}
+  .parry-badge .pb-n{font-size:11px}
+  .combo{left:16px;top:30%}
+  .combo b{font-size:38px}
+  .pausebtn{top:calc(var(--safe-t) + 40px);width:24px;height:24px;font-size:10px}
+}
+
 /* 装配页窄屏：上下堆叠 */
 @media (max-width:640px){
   .load-body{flex-direction:column;overscroll-behavior:contain;overflow-y:auto}
@@ -345,7 +385,7 @@ kbd{display:inline-block;min-width:20px;padding:1px 5px;margin:0 1px;border:1px 
 }
 
 /* 手机竖屏：右手操作区 */
-@media (max-width:760px){
+body.touch-ui:not(.landscape){
   .skillbar{right:10px;bottom:calc(var(--safe-b) + 232px);gap:6px}
   .skit{width:44px;height:44px}
   .tbtns{right:10px;bottom:calc(var(--safe-b) + 10px);width:196px;height:196px}
@@ -360,7 +400,7 @@ kbd{display:inline-block;min-width:20px;padding:1px 5px;margin:0 1px;border:1px 
   .parry-badge{right:10px;top:calc(50% - 96px)}
   .hud-top{gap:6px}
 }
-@media (max-height:700px) and (max-width:760px){
+body.touch-ui:not(.landscape){
   .skillbar{bottom:calc(var(--safe-b) + 190px)}
   .ultwrap{bottom:calc(var(--safe-b) + 18px)}
   .ultwrap{right:126px;bottom:calc(var(--safe-b) + 18px);width:54px;height:54px}
@@ -370,13 +410,12 @@ kbd{display:inline-block;min-width:20px;padding:1px 5px;margin:0 1px;border:1px 
   .tb-dash{width:54px;height:54px;bottom:76px}
   .tb-jump{width:46px;height:46px;right:74px;bottom:70px}
 }
-@media (min-width:820px){
-  .skillbar{right:24px;bottom:calc(var(--safe-b) + 118px)}
-  .ultwrap{right:24px;bottom:calc(var(--safe-b) + 26px)}
-  .tbtns{display:none}
-  .stick{display:none}
-  #touch{display:none!important}
-}
+body:not(.touch-ui) .skillbar{right:24px;bottom:calc(var(--safe-b) + 118px)}
+body:not(.touch-ui) .ultwrap{right:24px;bottom:calc(var(--safe-b) + 26px)}
+body:not(.touch-ui) .tbtns{display:none}
+body:not(.touch-ui) .stick{display:none}
+body:not(.touch-ui) #touch{display:none!important}
+body:not(.touch-ui) .parry-badge{display:block}
 #vig{position:fixed;inset:0;z-index:9;pointer-events:none;opacity:0;transition:opacity .35s;
   background:
     radial-gradient(125% 95% at 50% 44%,transparent 42%,rgba(0,0,0,.62) 100%),
