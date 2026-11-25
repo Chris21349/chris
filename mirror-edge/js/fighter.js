@@ -241,7 +241,9 @@
         case 'attack':
         case 'skill':
         case 'ult': {
-          if (this.state === 'attack' && this.airborne) this.vx *= Math.exp(-2 * dt);
+          if (this.act && this.act.move && !this.airborne) {
+            this.vx = U.approach(this.vx, this.moveDir * 230, 2000 * dt);
+          } else if (this.state === 'attack' && this.airborne) this.vx *= Math.exp(-2 * dt);
           else this.vx *= Math.exp(-6 * dt);
           this.tickAction(dt);
           break;
@@ -520,7 +522,7 @@
       if (free) { this.status.echo = 0; this.status.freeCast = 0; }
       if (this.state === 'guard') this.endGuard();
       this.battle.onSkill(this, def, i);
-      def.cast(this);
+      def.cast(this, i);
       return true;
     }
 
