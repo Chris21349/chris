@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,maximum-scale=1">
+<meta name="theme-color" content="#04060a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="镜刃">
+<meta name="description" content="镜刃 MIRROR EDGE — 以完美防反为骨、以闪避为魂的单机格斗。选你的镜反，斩你的敌人。">
+<title>镜刃 · MIRROR EDGE</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+<script>
+window.__errs=[];
+addEventListener('error',function(e){window.__errs.push((e.message||'err')+' @'+String(e.filename||'').split('/').pop()+':'+e.lineno);});
+addEventListener('unhandledrejection',function(e){window.__errs.push('promise: '+(e.reason&&e.reason.message||e.reason));});
+</script>
+
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="vig"></div>
+
+<!-- ══════════════ 战斗 HUD ══════════════ -->
+<div id="hud" aria-hidden="true">
+  <div class="hud-top">
+    <div class="pbar side-l">
+      <div class="prow">
+        <span class="pname" id="nameP">镜</span>
+        <span class="ptag" id="tagP"></span>
+      </div>
+      <div class="hpwrap">
+        <div class="hpdelay" id="hpPd"></div>
+        <div class="hpfill" id="hpPf"></div>
+        <div class="hpseg"></div>
+      </div>
+      <div class="posture"><i id="posePf"></i></div>
+    </div>
+    <div class="hud-center">
+      <div class="round" id="roundTag">试炼</div>
+      <div class="clock" id="clock">00:00</div>
+    </div>
+    <div class="pbar side-r">
+      <div class="prow">
+        <span class="ptag" id="tagE"></span>
+        <span class="pname" id="nameE">敌</span>
+      </div>
+      <div class="hpwrap">
+        <div class="hpdelay" id="hpEd"></div>
+        <div class="hpfill" id="hpEf"></div>
+        <div class="hpseg"></div>
+      </div>
+      <div class="posture"><i id="poseEf"></i></div>
+    </div>
+  </div>
+
+  <div class="combo" id="combo">
+    <b id="comboN">0</b><span>HIT</span><em id="comboRank"></em>
+  </div>
+
+  <div class="parry-badge" id="parryBadge">
+    <span class="pb-k">镜反</span><span class="pb-n" id="parryName">断罪·一闪</span>
+    <span class="pb-m" id="parryMark">◇◇◇</span>
+  </div>
+
+  <div class="hint" id="hint"></div>
+
+  <div class="skillbar" id="skillbar"></div>
+
+  <div class="ultwrap">
+    <div class="ultring" id="ultRing"></div>
+    <button class="ultbtn" id="ultBtn" data-act="ult">
+      <span>极</span><i id="ultFill"></i>
+    </button>
+  </div>
+
+  <button class="pausebtn" id="pauseBtn" aria-label="暂停">Ⅱ</button>
+</div>
+
+<!-- ══════════════ 触屏操作 ══════════════ -->
+<div id="touch">
+  <div id="stick" class="stick"><div class="stick-ring"></div><div class="knob"></div></div>
+  <div class="tbtns">
+    <button class="tb tb-guard" data-act="guard"><span>御</span></button>
+    <button class="tb tb-dash" data-act="dash"><span>闪</span></button>
+    <button class="tb tb-jump" data-act="jump"><span>跃</span></button>
+    <button class="tb tb-attack" data-act="attack"><span>斩</span></button>
+  </div>
+</div>
+
+<!-- ══════════════ 标题 ══════════════ -->
+<section class="screen" id="scr-title">
+  <div class="title-wrap">
+    <div class="brand">
+      <div class="brand-en">MIRROR&nbsp;EDGE</div>
+      <h1 class="brand-zh">镜<span>刃</span></h1>
+      <div class="brand-line"><i></i><em>以彼之刃，还彼之身</em><i></i></div>
+    </div>
+    <nav class="menu">
+      <button class="mbtn primary" data-go="stages"><b>开始战斗</b><small>STAGES</small></button>
+      <button class="mbtn" data-go="loadout"><b>战前装配</b><small>LOADOUT</small></button>
+      <button class="mbtn" data-go="codex"><b>镜之图鉴</b><small>CODEX</small></button>
+      <button class="mbtn" data-go="settings"><b>设置</b><small>OPTIONS</small></button>
+    </nav>
+    <div class="title-foot">
+      <span id="saveInfo">新存档</span>
+      <button class="link" id="importBtn">导入存档</button>
+      <button class="link" id="exportBtn">导出存档</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+  </div>
+  <div class="title-ver">v1.0.0</div>
+</section>
+
+<!-- ══════════════ 关卡选择 ══════════════ -->
+<section class="screen" id="scr-stages">
+  <header class="shead">
+    <button class="back" data-back="title">←</button>
+    <div><h2>选 择 战 场</h2><p>击破对手，取回属于你的刃与镜</p></div>
+    <div class="diff">
+      <button data-diff="0" class="on">普通</button>
+      <button data-diff="1">困难</button>
+      <button data-diff="2">噩梦</button>
+    </div>
+  </header>
+  <div class="stage-list" id="stageList"></div>
+</section>
+
+<!-- ══════════════ 装配 ══════════════ -->
+<section class="screen" id="scr-loadout">
+  <header class="shead">
+    <button class="back" data-back="title">←</button>
+    <div><h2>战 前 装 配</h2><p>四个技能位 · 一种镜反 · 一套属于你的打法</p></div>
+    <button class="go-fight" id="toStages">选择战场 →</button>
+  </header>
+  <div class="load-body">
+    <div class="col col-skills">
+      <div class="col-h"><span>技 能 库</span><em id="skillCount"></em></div>
+      <div class="skill-grid" id="skillGrid"></div>
+    </div>
+    <div class="col col-parry">
+      <div class="col-h"><span>镜 反 之 型</span><em>完美防反后发动</em></div>
+      <div class="parry-list" id="parryList"></div>
+    </div>
+  </div>
+  <div class="load-foot">
+    <div class="slots" id="slotBar"></div>
+    <div class="load-tip" id="loadTip">点选技能装配 · 再点一次卸下</div>
+  </div>
+</section>
+
+<!-- ══════════════ 图鉴 ══════════════ -->
+<section class="screen" id="scr-codex">
+  <header class="shead">
+    <button class="back" data-back="title">←</button>
+    <div><h2>镜 之 图 鉴</h2><p>技能 · 镜反 · 成就</p></div>
+    <div class="tabs">
+      <button class="on" data-tab="skills">技能</button>
+      <button data-tab="parry">镜反</button>
+      <button data-tab="achv">成就</button>
+    </div>
+  </header>
+  <div class="codex-body" id="codexBody"></div>
+</section>
+
+<!-- ══════════════ 设置 ══════════════ -->
+<section class="screen" id="scr-settings">
+  <header class="shead">
+    <button class="back" data-back="title">←</button>
+    <div><h2>设 置</h2><p>手感与表现</p></div>
+  </header>
+  <div class="set-body">
+    <label class="setrow"><span>音乐音量</span><input type="range" id="sMusic" min="0" max="100" value="55"><b id="vMusic">55</b></label>
+    <label class="setrow"><span>音效音量</span><input type="range" id="sSfx" min="0" max="100" value="80"><b id="vSfx">80</b></label>
+    <label class="setrow"><span>画面震动</span><input type="range" id="sShake" min="0" max="120" value="100"><b id="vShake">100</b></label>
+    <label class="setrow"><span>打击停顿</span><input type="range" id="sStop" min="40" max="140" value="100"><b id="vStop">100</b></label>
+    <label class="setrow sw"><span>技能冷却提示</span><input type="checkbox" id="sCd" checked></label>
+    <label class="setrow sw"><span>受击血液/火花</span><input type="checkbox" id="sBlood" checked></label>
+    <div class="keys">
+      <h3>键位</h3>
+      <p><kbd>A</kbd><kbd>D</kbd> 移动 · <kbd>W</kbd>/<kbd>空格</kbd> 跃起 · <kbd>J</kbd> 斩击（连点成连段） · <kbd>K</kbd> 重斩（长按蓄力）</p>
+      <p><kbd>L</kbd> 御/防反（松手取消） · <kbd>Shift</kbd> 闪避（有无敌帧） · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> 技能 · <kbd>R</kbd> 极 · <kbd>Esc</kbd> 暂停</p>
+      <p class="dim">手机：左半屏拖动移动，右侧按钮战斗。防反窗口内「御」= 完美防反，提前按住只会普通格挡。</p>
+    </div>
+    <button class="danger" id="wipeBtn">清除存档</button>
+  </div>
+</section>
+
+<!-- ══════════════ 暂停 ══════════════ -->
+<section class="screen small" id="scr-pause">
+  <div class="modal">
+    <h2>暂 停</h2>
+    <button class="mbtn primary" id="resumeBtn"><b>继续战斗</b></button>
+    <button class="mbtn" id="retryBtn"><b>重新开始</b></button>
+    <button class="mbtn" id="quitBtn"><b>返回战场</b></button>
+    <button class="mbtn ghost" id="toLoadout">战前装配</button>
+  </div>
+</section>
+
+<!-- ══════════════ 结算 ══════════════ -->
+<section class="screen small" id="scr-result">
+  <div class="modal wide">
+    <div class="res-head"><h2 id="resTitle">胜</h2><p id="resSub"></p></div>
+    <div class="res-stats" id="resStats"></div>
+    <div class="res-unlock" id="resUnlock"></div>
+    <div class="res-btns">
+      <button class="mbtn primary" id="resNext"><b>继续</b></button>
+      <button class="mbtn ghost" id="resRetry"><b>再 战</b></button>
+    </div>
+  </div>
+</section>
+
+<div id="fps"></div>
+
+<script src="js/core.js"></script>
+<script src="js/skeleton.js"></script>
+<script src="js/data.js"></script>
+<script src="js/fighter.js"></script>
+<script src="js/skills.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
