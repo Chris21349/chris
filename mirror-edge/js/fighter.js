@@ -165,6 +165,11 @@
         if (k.endsWith('_d')) continue;
         if (this.status[k] > 0) this.status[k] = Math.max(0, this.status[k] - dt);
       }
+      // 格挡预输入
+      if (this.bufferedGuard > 0) {
+        this.bufferedGuard -= dt;
+        if (this.state === 'idle' || this.state === 'run') { this.bufferedGuard = 0; this.startGuard(); }
+      }
       // 架势回复
       this.postureDelay = Math.max(0, this.postureDelay - dt);
       if (this.postureDelay <= 0 && !this.staggered) {
@@ -277,6 +282,24 @@
     tickAction() {
       const d = this.act;
       if (!d) { this.resetState('idle'); return; }
+      if (this.buffered) {
+        this.buffered.t -= 1 / 60;
+        if (this.buffered.t <= 0) this.buffered = null;
+        else if (this.canCancel()) {
+          const b = this.buffered;
+          this.buffered = null;
+          if (b.kind === 'light' && this.chainIdx < this.char.light.length - 1) {
+            this.chainIdx++;
+            this.beginAction(this.char.light[this.chainIdx], 'attack');
+            this.chainT = 0.9;
+            return;
+          }
+          if (b.kind === 'heavy' && this.char.heavy) {
+            this.beginAction(this.char.heavy, 'attack');
+            return;
+          }
+        }
+      }
       const t = this.actT;
       if (t >= (d.total || 0.5)) {
         if (d.hold && d.hold(this)) return;
@@ -308,6 +331,8 @@
 
     /* ───────── 起手 ───────── */
     beginAction(d, kind) {
+      if (!d.name) d.name = kind === 'attack' ? 'attack' : 'skill';
+      this.buffered = null;
       this.state = kind || 'skill';
       this.act = d; this.actT = 0; this.animT = 0; this.stateT = 0;
       this.trail.length = 0; this.trailOn = false;
@@ -371,8 +396,10 @@
       const air = this.airborne;
       if (kind === 'heavy') {
         if (air) return false;
-        if (this.state === 'attack' && this.canCancel() && this.char.heavy) {
-          this.beginAction(this.char.heavy, 'attack'); return true;
+        if (this.state === 'attack' && this.char.heavy) {
+          if (this.canCancel()) { this.beginAction(this.char.heavy, 'attack'); }
+          else { this.buffered = { kind: 'heavy', t: 0.5 }; }
+          return true;
         }
         if (this.state === 'idle' || this.state === 'run' || this.state === 'guard') {
           this.beginAction(this.char.heavy, 'attack'); return true;
@@ -385,14 +412,17 @@
         }
         return false;
       }
-      if (this.state === 'attack' && this.act && this.act.kind === 'light' && this.canCancel()) {
-        if (this.chainIdx < (this.char.light.length - 1)) {
+      if (this.state === 'attack' && this.act && this.act.kind === 'light') {
+        if (this.chainIdx >= this.char.light.length - 1) return false;
+        if (this.canCancel()) {
           this.chainIdx++;
           this.beginAction(this.char.light[this.chainIdx], 'attack');
           this.chainT = 0.9;
-          return true;
+        } else {
+          // 预输入：连段窗口还没开就先记下，开了自动接
+          this.buffered = { kind: 'light', t: 0.5 };
         }
-        return false;
+        return true;
       }
       if (this.state === 'idle' || this.state === 'run' || this.state === 'guard') {
         this.chainIdx = 0;
@@ -442,7 +472,10 @@
     startGuard() {
       if (this.dead || this.status.stun > 0) return;
       if (this.airborne) return;
-      if (this.state === 'attack' || this.state === 'skill' || this.state === 'ult' || this.state === 'hurt' || this.state === 'stagger') return;
+      if (this.state === 'attack' || this.state === 'skill' || this.state === 'ult' || this.state === 'hurt' || this.state === 'stagger') {
+        if (this.state !== 'stagger') this.bufferedGuard = 0.55;
+        return;
+      }
       this.guarding = true;
       this.parryHeld = true;
       if (this.parryCd <= 0) {
@@ -453,6 +486,7 @@
       if (this.state !== 'guard') this.setState('guard');
     }
     endGuard() {
+      this.bufferedGuard = 0;
       this.parryHeld = false;
       this.parryTimer = 0;
       if (this.state === 'guard') this.setState('idle');
@@ -583,7 +617,7 @@
       if (this.dead && this.stateT > 3) return;
       if (reflection) {
         ctx.save();
-        ctx.globalAlpha = 0.085;
+        ctx.globalAlpha = 0.06;
         ctx.scale(1, -1);
         this._draw(ctx, true);
         ctx.restore();
@@ -628,6 +662,31 @@
         ctx.restore();
       }
       MB.Skeleton.draw(ctx, this);
+
+      // 格挡护盾
+      if (!reflection && this.state === 'guard' && this.guarding) {
+        const t = performance.now() * 0.004;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.translate(this.x + this.facing * 30, -this.y - 62);
+        ctx.scale(this.facing, 1);
+        for (let i = 0; i < 3; i++) {
+          ctx.globalAlpha = (0.4 - i * 0.1) + Math.sin(t + i) * 0.06;
+          ctx.strokeStyle = i === 0 ? '#ffffff' : this.theme.glow;
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.arc(0, 0, 30 + i * 6, -1.15, 1.15);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 0.1;
+        ctx.fillStyle = this.theme.glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, 34, -1.15, 1.15);
+        ctx.lineTo(0, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
 
       // 蓄力/预警
       if (this.telegraph && !reflection) this.drawTelegraph(ctx);
