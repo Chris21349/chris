@@ -5,7 +5,7 @@
 (() => {
 'use strict';
 
-const VERSION = '7.4.2';
+const VERSION = '7.4.3';
 const STORAGE_KEY = 'soul-lantern:v1:save';
 const LEGACY_KEY = 'soul-lantern-save-v1';
 
@@ -626,7 +626,9 @@ const ENEMY_TYPES = {
 function spawnEnemy(typeKey, opt = {}) {
   if (!G.player) return null;
   // 同屏上限随时间提升（0 分钟 150 → 8 分钟 430）
-  const cap = Math.min(340, 150 + G.time * 0.55);
+  // 后期鬼潮：上限与速率随时间加速抬升
+  const late = Math.max(0, G.time - 90);
+  const cap = Math.min(520, 175 + G.time * 0.62 + late * 0.55);
   if (!opt.force && G.enemies.length >= cap) return null;
   const t = ENEMY_TYPES[typeKey];
   if (!t) return null;
@@ -2624,8 +2626,25 @@ function updateWorld(dt) {
     if (G.mode === 'title') return;
   }
 
+  // 夜潮：每 75 秒一波，8 秒内刷怪翻倍
+  if (G.time > 105 && !G.tut) {
+    G.tideT = (G.tideT === undefined ? 60 : G.tideT) - dt;
+    if (G.tideT <= 0) {
+      G.tideT = 60;
+      G.tide = 10;
+      G.flash = Math.max(G.flash, 0.2); G.flashColor = '#8a3a2a';
+      toast('夜 潮 · 鬼从四面八方涌上来');
+      Sound.boss(); shake(6);
+      for (let i = 0; i < 24; i++) spawnEnemy(i % 4 ? 'chi' : 'mei', { ang: i / 24 * TAU, rad: Math.max(VIEW.w, VIEW.h) * 0.62 });
+    }
+    if (G.tide > 0) G.tide -= dt;
+  }
+
   // 波次
-  const rate = Math.min(8, 2.2 + G.time / 32);
+  let rate = Math.min(15, 2.4 + G.time / 26);
+  // 后期再加一档：180 秒后每小时刻都在加压
+  if (G.time > 180) rate += Math.min(9, (G.time - 180) / 45);
+  if (G.tide > 0) rate += 10;
   G.spawnT += dt * rate;
   while (!G.tut && G.spawnT >= 1) {
     G.spawnT -= 1;
@@ -5490,7 +5509,7 @@ function startTutorial() {
   G.mode = 'tutorial';
   G.time = 0; G.kills = 0; G.depth = 1;
   G.enemies = []; G.shots = []; G.orbs = []; G.parts = []; G.texts = []; G.rings = []; G.slashes = []; G.arcs = []; G.seals = []; G.cones = []; G.blades = []; G.bladeFx = []; G.sealRings = []; G.beams = []; G.ringFx = []; G.lines = []; G.vortices = []; G.chains = []; G.items = []; G.pillars = []; G.lasers = [];
-  G.spawnT = 0; G.bossT = 1e9; G.boss = null; G.shake = 0; G.flash = 0; G.hitstop = 0;
+  G.spawnT = 0; G.bossT = 1e9; G.boss = null; G.shake = 0; G.flash = 0; G.hitstop = 0; G.tide = 0; G.tideT = 75;
   G.player = newPlayer();
   G.player.hpMax = 400; G.player.hp = 400;
   G.player.weapons = { flame: 2 };
