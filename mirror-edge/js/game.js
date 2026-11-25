@@ -45,6 +45,9 @@
   }
 
   MB.SAVE = loadSave();
+  MB.VERSION = 'v1.3.1';
+  const vt = document.getElementById('verTag');
+  if (vt) vt.textContent = MB.VERSION;
 
   const Game = (MB.Game = {
     scene: 'menu',
@@ -156,9 +159,26 @@
       Game.startBattle(+q.get('stage') || 0, +q.get('diff') || 0);
     }
     if (!q.has('nosw') && !q.has('app') && 'serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
+      const hadController = !!navigator.serviceWorker.controller;
+      let reloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || reloading) return;
+        reloading = true;
+        location.reload();
       });
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+          reg.update().catch(() => {});
+          // 回到前台时再查一次更新
+          document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) reg.update().catch(() => {});
+          });
+        }).catch(() => {});
+      });
+      // 页面每次加载后 1 秒再主动检查（覆盖长期挂后台的情况）
+      setTimeout(() => {
+        navigator.serviceWorker.getRegistration().then((r) => r && r.update().catch(() => {}));
+      }, 1000);
     }
     if (q.get('fps')) document.getElementById('fps').style.display = 'block';
     Game.debugFps = !!q.get('fps');
@@ -442,6 +462,22 @@
     } catch (e) {
       MB.UI.toast('导入失败：' + e.message);
     }
+  };
+
+  Game.forceUpdate = async function () {
+    MB.UI.toast('正在清理缓存并更新…');
+    try {
+      if (navigator.serviceWorker) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) await r.unregister();
+      }
+      if (window.caches) {
+        const keys = await caches.keys();
+        for (const k of keys) await caches.delete(k);
+      }
+    } catch (e) { /* ignore */ }
+    const u = location.pathname + '?u=' + Date.now();
+    location.replace(u);
   };
 
   Game.wipe = function () {
