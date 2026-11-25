@@ -5,7 +5,7 @@
 (() => {
 'use strict';
 
-const VERSION = '7.2.0';
+const VERSION = '7.2.1';
 const STORAGE_KEY = 'soul-lantern:v1:save';
 const LEGACY_KEY = 'soul-lantern-save-v1';
 
