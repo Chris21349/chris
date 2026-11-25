@@ -31,7 +31,7 @@
       'resTitle', 'resSub', 'resStats', 'resUnlock', 'resNext', 'resRetry',
       'saveInfo', 'skillCount', 'loadTip', 'touch', 'stick', 'toStages', 'importBtn', 'exportBtn', 'importFile', 'wipeBtn',
       'sMusic', 'vMusic', 'sSfx', 'vSfx', 'sShake', 'vShake', 'sStop', 'vStop', 'sCd', 'sBlood',
-      'resumeBtn', 'retryBtn', 'quitBtn', 'toLoadout',
+      'resumeBtn', 'retryBtn', 'quitBtn', 'toLoadout', 'parryCdBar', 'guardCd', 'rotate', 'rotSkip',
     ].forEach((id) => { D[id] = $('#' + id); });
 
     // 菜单导航
@@ -86,6 +86,16 @@
       if (confirm('确定清除全部存档？此操作不可撤销。')) MB.Game.wipe();
     });
 
+    const checkOrient = () => {
+      const portrait = window.innerHeight > window.innerWidth;
+      const touch = matchMedia('(pointer:coarse)').matches;
+      D.rotate.classList.toggle('on', !!(portrait && touch && !UI.rotDismissed));
+    };
+    window.addEventListener('resize', checkOrient);
+    window.addEventListener('orientationchange', () => setTimeout(checkOrient, 150));
+    D.rotSkip.addEventListener('click', () => { UI.rotDismissed = true; D.rotate.classList.remove('on'); });
+    setTimeout(checkOrient, 300);
+
     UI.bindTips();
     UI.bindTouch();
     UI.refreshTitle();
@@ -116,9 +126,7 @@
 
   /* ───────── 关卡 ───────── */
   UI.stageUnlocked = function (i) {
-    if (i === 0) return true;
-    const prev = MB.SAVE.cleared[i - 1];
-    return !!(prev && prev.some(Boolean));
+    return true; // 全部战场开放，高难度可直接挑战
   };
 
   UI.renderStages = function () {
@@ -207,14 +215,13 @@
     if (at >= 0) { s.loadout.splice(at, 1); s.loadout.push(null); }
     else {
       let slot = UI.slotSel;
-      if (slot == null || slot > 3) slot = 0;
-      // 若目标槽位已有技能，交换
+      if (slot == null || slot > 2) slot = 0;
       s.loadout[slot] = id;
-      // 去重
-      for (let i = 0; i < 4; i++) if (i !== slot && s.loadout[i] === id) s.loadout[i] = null;
-      UI.slotSel = (slot + 1) % 4;
+      for (let i = 0; i < 3; i++) if (i !== slot && s.loadout[i] === id) s.loadout[i] = null;
+      UI.slotSel = (slot + 1) % 3;
     }
-    while (s.loadout.length < 4) s.loadout.push(null);
+    while (s.loadout.length < 3) s.loadout.push(null);
+    s.loadout.length = 3;
     MB.Game.save();
     UI.renderLoadout();
   };
@@ -222,7 +229,7 @@
   UI.renderSlots = function () {
     const s = MB.SAVE;
     D.slotBar.innerHTML = '';
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 3; i++) {
       const id = s.loadout[i];
       const def = id ? MB.SKILL_DEFS.find((d) => d.id === id) : null;
       const b = document.createElement('button');
@@ -232,8 +239,8 @@
       b.addEventListener('click', () => { UI.slotSel = i; MB.Sound.ui(); UI.renderSlots(); });
       D.slotBar.appendChild(b);
     }
-    const filled = s.loadout.filter(Boolean).length;
-    D.loadTip.textContent = filled < 4 ? '还有空位。点按下方槽位选择位置，再点技能装配。' : '四格已满。点选槽位后可替换其中一格。';
+    const filled = s.loadout.slice(0, 3).filter(Boolean).length;
+    D.loadTip.textContent = filled < 3 ? '还有空位。点按下方槽位选择位置，再点技能装配。' : '三格已满。点选槽位后可替换其中一格。';
   };
 
   /* ───────── 图鉴 ───────── */
@@ -303,7 +310,9 @@
 
   /* ───────── 触屏 ───────── */
   UI.bindTouch = function () {
-    MB.Game.isTouch = matchMedia('(pointer:coarse)').matches || innerWidth < 820;
+    MB.Game.isTouch = matchMedia('(pointer:coarse)').matches ||
+      ('ontouchstart' in window && Math.min(innerWidth, innerHeight) < 900);
+    if (MB.Game.applyLayout) MB.Game.applyLayout();
     // 按钮
     document.addEventListener('pointerdown', (e) => {
       const b = e.target.closest('[data-act]');
@@ -398,7 +407,7 @@
     const bar = D.skillbar;
     bar.innerHTML = '';
     const p = b.player;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 3; i++) {
       const id = (p.skills || [])[i];
       const def = id ? MB.SKILLS[id] : null;
       const d = document.createElement('div');
@@ -471,6 +480,21 @@
       D.parryMark.textContent = '◆'.repeat(p.mirrorStacks % 3) + '◇'.repeat(3 - (p.mirrorStacks % 3));
       D.parryBadge.classList.toggle('pulse', p.mirrorStacks > 0);
     }
+    // 防反冷却
+    const cdMax = p.parryCdMax || 3;
+    const cdv = p.parryCd || 0;
+    const cdK = cdMax > 0 ? U.clamp(1 - cdv / cdMax, 0, 1) : 1;
+    const cdp = Math.round(cdK * 40);
+    if (L.pcd !== cdp) {
+      L.pcd = cdp;
+      D.parryCdBar.style.transform = 'scaleX(' + cdK + ')';
+      const guardBtn = document.querySelector('.tb-guard');
+      if (guardBtn) {
+        guardBtn.classList.toggle('cd', cdv > 0.05);
+        D.guardCd.textContent = cdv > 0.1 ? Math.ceil(cdv) : '';
+      }
+    }
+
     // 时间
     const tSec = Math.floor(b.stats.time);
     const ts = String(Math.floor(tSec / 60)).padStart(2, '0') + ':' + String(tSec % 60).padStart(2, '0');
