@@ -538,7 +538,7 @@
           f.x = U.clamp(e.x + side * 70, -MB.ARENA, MB.ARENA);
           f.facing = e.x > f.x ? 1 : -1;
           f.setState('attack'); f.stateT = 0;
-          MB.FX.after(f, { life: 0.4, alpha: 0.8, color: '#ffffff' });
+          MB.FX.after(f, { life: 0.3, alpha: 0.42, color: '#ffffff' });
           MB.FX.slash(e.x, -e.y - 40 - (i % 4) * 26, U.rand(TAU), 150, { color: '#ffffff', width: 22, arc: 2.6 });
           MB.FX.ring(e.x, -e.y - 60, 8, 120, { color: '#dff9ff', life: 0.3, width: 2 });
           b.shake(6);
