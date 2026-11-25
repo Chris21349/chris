@@ -542,8 +542,6 @@
 
       // 地面倒影
       ctx.save();
-      ctx.globalAlpha = 0.13;
-      ctx.translate(0, 0); ctx.scale(1, -1);
       this.enemy.draw(ctx, true);
       this.player.draw(ctx, true);
       ctx.restore();
