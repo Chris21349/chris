@@ -1,6 +1,6 @@
 /* 彩潮 · CHROMA TIDE — 离线缓存 */
 'use strict';
-var CACHE = 'chroma-tide-v1.0.0';
+var CACHE = 'chroma-tide-v1.0.1';
 var ASSETS = [
   './',
   './index.html',
@@ -38,6 +38,17 @@ self.addEventListener('fetch', function (e) {
       caches.open(CACHE).then(function (c) { c.put('./index.html', copy); });
       return res;
     }).catch(function () { return caches.match('./index.html'); }));
+    return;
+  }
+  var networkFirst = req.destination === 'script' || req.destination === 'style' || req.destination === 'manifest';
+  if (networkFirst) {
+    e.respondWith(fetch(req).then(function (res) {
+      if (res.ok && req.url.indexOf(location.origin) === 0) {
+        var copy = res.clone();
+        caches.open(CACHE).then(function (c) { c.put(req, copy); });
+      }
+      return res;
+    }).catch(function () { return caches.match(req); }));
     return;
   }
   e.respondWith(caches.match(req).then(function (hit) {
