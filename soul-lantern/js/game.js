@@ -81,7 +81,7 @@
     };
     w.blade.lvl = 1;
     return {
-      time: 0, kills: 0, level: 1, xp: 0, need: 12, hp: 100, maxHp: 100,
+      time: 0, kills: 0, level: 1, xp: 0, need: 12, hp: 120, maxHp: 120,
       weapons: w, passives: { speed: 0, vigor: 0, magnet: 0, edge: 0, haste: 0 },
       pending: 0, combo: 0, comboT: 0, ult: 0, bestCombo: 0,
       bossDone: 0, boss: null, elapsed: 0, dmgDealt: 0
@@ -459,7 +459,7 @@
   G.applyStats = function () {
     var r = this.run, w = r.weapons;
     var p = r.passives;
-    r.maxHp = 100 + p.vigor * 18;
+    r.maxHp = 120 + p.vigor * 18;
     this.player.hp = Math.min(this.player.hp, r.maxHp);
     this.speed = 6.3 * (1 + p.speed * 0.07);
     this.dmgMul = 1 + p.edge * 0.12;
