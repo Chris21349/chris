@@ -10,14 +10,14 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=1.1.2">
 </head>
 <body>
 <div id="app">
   <canvas id="gl"></canvas>
   <canvas id="fx2d"></canvas>
   <div id="vignette"></div>
-  <div id="weapon" class="hidden"><img src="art/weapon.png" alt=""></div>
+  <div id="weapon" class="hidden"><img src="art/weapon.png?v=1.1.2" alt=""></div>
   <div id="flash"></div>
 
   <!-- ============ HUD ============ -->
@@ -154,12 +154,12 @@
   <input id="file-input" type="file" accept="application/json" hidden>
 </div>
 
-<script src="js/three.min.js"></script>
-<script src="js/art.js"></script>
-<script src="js/audio.js"></script>
-<script src="js/fx.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/game.js"></script>
+<script src="js/three.min.js?v=1.1.2"></script>
+<script src="js/art.js?v=1.1.2"></script>
+<script src="js/audio.js?v=1.1.2"></script>
+<script src="js/fx.js?v=1.1.2"></script>
+<script src="js/ui.js?v=1.1.2"></script>
+<script src="js/game.js?v=1.1.2"></script>
 <script>
 window.addEventListener('load', function () {
   try { CT.Game.boot(); }
@@ -172,7 +172,7 @@ document.addEventListener('pointerdown', function () { if (window.CT && CT.Sound
 (function () {
   var local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
   if ('serviceWorker' in navigator && !/[?&]app=1/.test(location.search) && !local && location.protocol.indexOf('http') === 0) {
-    window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js?v=1.1.0').catch(function () { }); });
+    window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js?v=1.1.2').catch(function () { }); });
   }
 })();
 </script>

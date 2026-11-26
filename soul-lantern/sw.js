@@ -1,23 +1,23 @@
 /* 彩潮 · CHROMA TIDE — 离线缓存 */
 'use strict';
-var CACHE = 'chroma-tide-v1.1.0';
+var CACHE = 'chroma-tide-v1.1.2';
 var ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './css/style.css',
-  './js/three.min.js',
-  './js/art.js',
-  './js/audio.js',
-  './js/fx.js',
-  './js/ui.js',
-  './js/game.js',
+  './css/style.css?v=1.1.2',
+  './js/three.min.js?v=1.1.2',
+  './js/art.js?v=1.1.2',
+  './js/audio.js?v=1.1.2',
+  './js/fx.js?v=1.1.2',
+  './js/ui.js?v=1.1.2',
+  './js/game.js?v=1.1.2',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png',
-  './art/weapon.png'
+  './art/weapon.png?v=1.1.2'
 ];
 
 self.addEventListener('install', function (e) {
