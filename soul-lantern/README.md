@@ -1,61 +1,81 @@
 # 彩潮 · CHROMA TIDE
 
-**3D 手绘感割草肉鸽 · 竖屏 · 单局 6 分钟**
+**水墨第一人称割草肉鸽 · 竖屏 · 单局 6 分钟**
 
-> 世界被「褪色潮」洗成灰白。你提着笔锋走进荒原，收割墨兽，把颜色还给大地。
+> 纸是荒原，墨是兽。落刀的地方，才有颜色。
 
-- 网页版：`https://chris21349.github.io/chris/soul-lantern/`（已部署）
-- Android：`彩潮-Android-v1-release.apk`（release 签名，包名 `com.chris.chromatide`）
-- 版本：v1.0.0 / versionCode 1
+- 网页版：<https://chris21349.github.io/chris/soul-lantern/>
+- Android：`彩潮-Android-v1.1.0-release.apk`（release 签名，包名 `com.chris.chromatide`，versionCode 2）
+- 版本：v1.1.0（半重做：第一人称 + 水墨）
 - 技术：Three.js r149（本地内置）+ 原生 JS，零构建、纯静态
 
-本作是原创设计：角色、敌人、Logo、构图、UI 均为程序化/手绘生成，不使用任何现成游戏的角色、图标或素材。
+原创设计：角色、敌人、场景、笔刷、UI、图标均为程序化/手绘生成，不使用任何现成游戏素材。
 
 ---
 
-## 玩法
+## v1.1 改了什么
+
+- 镜头从 3/4 俯视改为**第一人称**：视线 1.64m，FOV 80°，跟随头部起伏、冲刺 FOV 拉伸、受击/落刀镜头后坐。
+- 美术从彩墨荒原改为**纸本水墨**：纸色天空、朱砂日轮、层叠墨山、墨竹、墨池与长笔触；只有刀锋落处短暂炸出朱砂/石绿/金色。
+- 战斗从自动环绕改为**手动三连斩 + 破 + 闪 + 万彩**：
+  - 三连斩：斜斩 → 反手 → 突刺，第三下伤害/击退更高。
+  - 破：360° 横扫，清开近身包围，冷却 4.8s。
+  - 闪：短突进 + 0.32s 无敌，穿出包围。
+  - 万彩：斩杀充能，满了清场并慢放。
+- 打击感层：顿帧、镜头后坐与滚转、FOV 冲击、屏幕斩击弧、命中标记、墨溅、伤害数字、敌人闪白/击退/硬直、击杀慢放、合成音效分层。
+- 第一人称武器改为手绘笔刷精灵 + 逐帧挥砍位移；性能更稳，也不再挡视野。
+
+## 操作
 
 | 操作 | 手机 | 电脑 |
 |---|---|---|
-| 移动 | 屏幕任意处拖动（浮动摇杆） | WASD / 方向键 |
-| 自动攻击 | 笔锋自动环绕 | 自动 |
-| 闪身 | 右下「闪身」 | 空格 |
-| 大招「万彩归一」 | 右下「万彩」 | Q |
+| 移动 | 左半屏浮动摇杆 | WASD |
+| 视角 | 右半屏拖动 | 点击画面锁定鼠标后移动 |
+| 斩 | 右下红色「斩」/ 点右半屏 | 鼠标左键 |
+| 破（重击） | 「破」 | 鼠标右键 |
+| 闪 | 「闪」 | 空格 |
+| 万彩 | 「万彩」 | Q |
 | 暂停 | 左上暂停 | Esc / P |
-| 升级选择 | 点卡牌 | 1 / 2 / 3 |
+| 选卡 | 点击卡牌 | 1 / 2 / 3 |
 
-- **6 分钟一局**：3:00 潮心 Boss，6:00 终焉 Boss。击杀终焉 Boss 即胜利。
-- **4 种武器**：笔锋回旋、墨爆、雷链、墨雨；**5 种被动**：疾行、厚涂、引彩、锋锐、疾攻。
-- **4 种敌人**：墨蚜（群）、疾笔（快）、砚龟（坦）、泼墨者（远程）；Boss 会砸地、召唤、暴怒。
-- 击杀掉落颜料（经验），靠近自动吸取；每 37 杀掉落一次治疗；连斩累积、能量满可放大招。
-- 受伤有短暂无敌帧、震屏与边缘反馈；低血量时屏幕边缘会呼吸发红。
+## 内容
 
-## 美术方向
+- **6 分钟一局**：3:00 潮心 Boss，6:00 终焉 Boss；击杀终焉 Boss 胜利。
+- **4 种墨兽**：墨蚜（群）、疾笔（快）、砚龟（坦）、泼墨者（远程）；Boss 会砸地、召唤、暴怒。
+- **8 种升级**：锋锐、疾斩、长锋、铁骨、踏墨、引墨、重墨、噬墨；每级三选一。
+- 击杀掉颜料，走近自动吸取；每 40 杀掉治疗；连斩累积；低血量纸边泛朱砂。
+- PWA：manifest + Service Worker 离线缓存（GitHub Pages 生效；本机与 APK 内跳过）。
 
-完整规范见 [ART-BIBLE.md](ART-BIBLE.md)：锁定调色板、剪影与比例、材质语言、光照层级、UI/图标、动效与验收清单。
+## 手感参数（可调）
 
-- 核心：**低模 + 手绘感体块 + 明确色阶**，不是给写实模型套滤镜。
-- 暖金主光 / 冷紫墨影；明暗交界用低频噪声轻微打散；无 PBR 高光、无阴影贴图、无环境反射。
-- 角色/敌人走顶点色 + 自定义三阶着色器；地面是程序化画布笔触；特效最多三色。
-- UI：墨底、纸字、金强调；触控目标 ≥ 48 dp，正文 ≥ 13 px。
+| 项 | 值 |
+|---|---|
+| 一/二段斩 | 0.38s，命中 ~0.11s |
+| 三段突刺 | 0.54s，伤害 ×1.45，击退 8.5 |
+| 顿帧 | 50–110ms（重击/多目标更高） |
+| 镜头后坐 | 0.038rad + 随机 0.015，FOV +5.5° |
+| 重击 | 55 基础伤害、360°、击退 10、冷却 4.8s |
+| 冲刺 | 0.18s、无敌 0.32s、冷却 2.5s |
+| 万彩 | 16m 内 180（Boss 320），慢放 0.4s |
 
 ## 文件结构
 
 ```
 index.html            入口 / HUD / 各界面
-css/style.css         UI 样式（无外部字体、无图片纹理）
-js/three.min.js       Three.js r149（本地内置，离线可用）
-js/art.js             调色板 / 着色器 / 程序化几何 / 画布贴图
-js/audio.js           WebAudio 合成音效（无音频文件）
-js/fx.js              粒子 / 地面颜料 / 冲击环 / 雷链 / 伤害数字
-js/ui.js              HUD / 升级卡 / 摇杆 / 暂停 / 结算 / 存档
-js/game.js            世界 / 战斗 / 敌人 / Boss / 升级 / 主循环
-icons/                PWA 与 APK 图标（gen_icons.py 生成）
-manifest.webmanifest  PWA 清单
-sw.js                 离线缓存（GitHub Pages 生效；本机与 APK 内跳过）
+css/style.css         纸墨 UI（无外部字体、无图片纹理）
+art/weapon.png        第一人称手绘毛笔（程序化生成）
+js/three.min.js       Three.js r149
+js/art.js             水墨调色板 / 着色器 / 场景 / 墨兽 / 毛笔
+js/audio.js           WebAudio 合成音效（挥砍、命中、重击、击杀）
+js/fx.js              粒子 / 墨渍 / 屏幕斩击 / 命中标记 / 伤害数字
+js/ui.js              HUD / 摇杆 / 视角 / 升级 / 暂停 / 结算 / 存档
+js/game.js            第一人称 / 战斗 / 敌人 / Boss / 升级 / 主循环
+icons/                PWA 与 APK 图标
+manifest.webmanifest  PWA 清单（id/start_url/scope 均为 "./"）
+sw.js                 离线缓存（v1.1.0）
 serve.py              本地预览服务器（禁用缓存）
-native/               Android WebView 壳 + release 构建脚本 + keystore（不部署到网页）
-ART-BIBLE.md          美术圣经
+native/               Android WebView 壳 + release 构建（不部署网页）
+ART-BIBLE.md          水墨第一人称美术圣经 v2.0
 ```
 
 ## 本地运行
@@ -66,46 +86,41 @@ python3 serve.py 8321
 # 打开 http://localhost:8321
 ```
 
-也可以直接双击 `index.html`，但本地文件模式下不允许 Service Worker / 安装。
-
 ## 存档
 
-- 使用 `localStorage`，键名 `chromatide.save.v1`；保存最佳收割、最长生存、最高连斩、总场次与音效开关。
-- 设置/暂停/标题页可导出 JSON（`chroma-tide-save.json`）与导入。
-- **没有云端、没有账号**。换浏览器、换设备、清缓存会丢档；换设备前请先导出。
-- 导入时取新旧记录的最大值，不会把旧档覆盖成更差的记录。
+- `localStorage` 键：`chromatide.fps.save.v1`（与旧版/其他游戏隔离）。
+- 保存最佳斩获、最长存活、最高连斩、总场次、音效、视角灵敏度。
+- 标题 / 暂停 / 结算页可导出、导入 JSON。
+- **无云端、无账号**；换浏览器、换设备、清缓存会丢档，先导出。
+- 旧版俯视模式的记录不再沿用，第一人称版本从零开始记。
 
 ## Android
 
-- 包名：`com.chris.chromatide`；versionCode 1 / versionName 1.0.0。
-- release 签名（独立 keystore，不与其他游戏共用）；可直接覆盖安装同包名后续版本并保留 localStorage。
-- 壳：`native/`，WebView 加载 APK 内置本地 HTTP 服务（固定 127.0.0.1 端口以稳定存档 origin）。
-- 构建（需要 JDK 17 + Android SDK platform-34 / build-tools 34.0.0）：
+- 包名 `com.chris.chromatide`，versionCode 2 / versionName 1.1.0。
+- 同一 keystore 覆盖签名，安装后可保留本机存档。
+- 构建：
 
 ```bash
 cd native
-ANDROID_HOME=/tmp/android-sdk ./build_apk.sh 1 1.0.0
+ANDROID_HOME=/tmp/android-sdk ./build_apk.sh 2 1.1.0
 ```
 
-> keystore 已生成：`native/keystore/chroma-tide-release.jks`，口令与 alias 只记录在私密文件里。keystore 与密码不进入网页部署包，也不进入 Git。
+- keystore 与口令只记录在私密文件；不进入网页包，也不进入 Git。
 
-## 部署（GitHub Pages）
+## 部署
 
-仓库：`Chris21349/chris`，分支 `main`，子目录 `soul-lantern/`；站点 `https://chris21349.github.io/chris/soul-lantern/`。
+- 仓库 `Chris21349/chris`，分支 `main`，子目录 `soul-lantern/`；站点 <https://chris21349.github.io/chris/soul-lantern/>。
+- 只上传网页文件（不要上传 `native/`、keystore）。
+- 推送后等待 Pages 构建，实际打开线上地址验证标题、开局、锁定视角、斩击、升级、存档与离线缓存。
 
-1. 网页文件放在 `soul-lantern/`，不动仓库根目录 `index.html` 与其他游戏目录。
-2. 只提交 `index.html`、`css/`、`js/`、`icons/`、`manifest.webmanifest`、`sw.js`、`README.md`、`ART-BIBLE.md`。
-3. Pages 已开启（Deploy from branch → main → /(root)），推送后等待构建。
-4. 部署后实际打开线上地址，验证画面、音效、摇杆、升级、存档与离线缓存。
+## 性能
 
-## 性能与兼容
+- 同屏敌人 ≤ 45（实例化渲染），粒子池 500，draw call < 40。
+- 中端手机目标 45–60fps；桌面流畅。
+- 无联机、无排行榜、无假账号。
 
-- 目标：中端手机 45–60 fps；桌面浏览器流畅。当前同屏上限 150 敌人、粒子池 500、draw call < 40。
-- 需要 WebGL（Android WebView 8+ / 现代浏览器）。无 WebGL 时加载页会给出提示。
-- 无联机、无云存档、无排行榜、无付费点。
+## 许可
 
-## 素材与许可
-
-- 代码与程序化美术：本项目原创。
-- Three.js：MIT License（`js/three.min.js` 保留版权头）。
-- 音效：WebAudio 实时合成，无外部音频文件。
+- 代码与程序化美术：原创。
+- Three.js：MIT（保留版权头）。
+- 音效：WebAudio 实时合成，无外部音频。

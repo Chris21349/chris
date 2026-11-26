@@ -1,6 +1,6 @@
 /* 彩潮 · CHROMA TIDE — 离线缓存 */
 'use strict';
-var CACHE = 'chroma-tide-v1.0.1';
+var CACHE = 'chroma-tide-v1.1.0';
 var ASSETS = [
   './',
   './index.html',
@@ -16,7 +16,8 @@ var ASSETS = [
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
-  './icons/favicon-32.png'
+  './icons/favicon-32.png',
+  './art/weapon.png'
 ];
 
 self.addEventListener('install', function (e) {

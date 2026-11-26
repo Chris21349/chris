@@ -70,6 +70,26 @@
   }
 
   var SFX = {
+    swing: function () {
+      noise(0.13, 'bandpass', 1600, 0.10, 0, 1.1);
+      tone(420, 180, 0.10, 'triangle', 0.04);
+    },
+    impact: function () {
+      if (!gate('impact', 35)) return;
+      tone(120, 52, 0.16, 'sine', 0.22);
+      noise(0.07, 'lowpass', 900, 0.14);
+      tone(880, 300, 0.05, 'square', 0.03);
+    },
+    heavy: function () {
+      tone(90, 34, 0.42, 'sine', 0.3);
+      noise(0.26, 'lowpass', 700, 0.18);
+      tone(300, 90, 0.22, 'triangle', 0.08, 0.03);
+    },
+    kill: function () {
+      if (!gate('kill', 45)) return;
+      noise(0.2, 'bandpass', 1200, 0.12, 0, 0.8);
+      tone(260, 80, 0.14, 'sine', 0.10);
+    },
     hit: function () {
       if (!gate('hit', 40)) return;
       noise(0.08, 'highpass', 900, 0.10);

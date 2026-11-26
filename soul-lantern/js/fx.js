@@ -6,7 +6,8 @@
     scene: null, camera: null, canvas: null, ctx: null,
     dpr: 1, w: 1, h: 1,
     shakeAmt: 0, shakeT: 0, stop: 0,
-    numbers: [], poolN: 0
+    numbers: [], poolN: 0,
+    slashes: [], screenSplats: [], hitmarks: [], tinted: null
   };
 
   /* ---------- 粒子系统 ---------- */
@@ -117,6 +118,7 @@
     this.dust.pts.frustumCulled = false;
     this.dust.pts.renderOrder = 5;
     scene.add(this.dust.pts);
+    this.initScreen();
   };
 
   Fx.setViewport = function (w, h, dpr) {
@@ -181,7 +183,7 @@
       var a = Math.random() * 6.283, sp = U.rand(0.4, 1) * (power || 3);
       emit(this.paint, x + U.rand(-0.2, 0.2), (y || 0.3) + U.rand(0, 0.5), z + U.rand(-0.2, 0.2),
         Math.cos(a) * sp, U.rand(1.2, 3.2) * (power || 3) * 0.4, Math.sin(a) * sp,
-        col, U.rand(0.06, 0.16), U.rand(0.02, 0.06), U.rand(0.4, 0.9), 7, 0.9);
+        col, U.rand(0.035, 0.08), U.rand(0.012, 0.035), U.rand(0.4, 0.9), 7, 0.9);
     }
   };
 
@@ -190,7 +192,7 @@
     for (var i = 0; i < n; i++) {
       var a = Math.random() * 6.283, sp = U.rand(0.8, 1.6) * (power || 4);
       emit(this.sparks, x, y, z, Math.cos(a) * sp, U.rand(0.5, 1.6) * (power || 4) * 0.5, Math.sin(a) * sp,
-        col, U.rand(0.07, 0.16), 0.01, U.rand(0.16, 0.4), 3, 1);
+        col, U.rand(0.04, 0.09), 0.01, U.rand(0.16, 0.4), 3, 1);
     }
   };
 
@@ -317,16 +319,108 @@
     this.dust.pts.position.set(x, 0, z);
   };
 
-  /* ---------- 2D overlay：伤害数字 ---------- */
+  /* ---------- 屏幕层 ---------- */
+  function tint(src, color) {
+    var c = document.createElement('canvas');
+    c.width = src.width; c.height = src.height;
+    var x = c.getContext('2d');
+    x.drawImage(src, 0, 0);
+    x.globalCompositeOperation = 'source-in';
+    x.fillStyle = color; x.fillRect(0, 0, c.width, c.height);
+    return c;
+  }
+  Fx.initScreen = function () {
+    var slash = CT.TEX.slash();
+    this.tinted = {
+      ink: tint(CT.TEX.splat().image, '#0E0C0A'),
+      verm: tint(CT.TEX.splat().image, '#B23A2A'),
+      gold: tint(CT.TEX.splat().image, '#C9A45C'),
+      teal: tint(CT.TEX.splat().image, '#4E7A72'),
+      paper: tint(CT.TEX.splat().image, '#F4E9D2'),
+      slash: slash.image
+    };
+  };
+
+  Fx.slash = function (angle, tintName, scale) {
+    this.slashes.push({ t: 0, life: 0.16, a: angle || 0, c: tintName || 'paper', s: scale || 1 });
+  };
+  Fx.hitmark = function (kind) {
+    this.hitmarks.push({ t: 0, life: kind === 'kill' ? 0.24 : 0.15, kind: kind || 'hit' });
+  };
+  Fx.screenSplat = function (x, y, tintName, size, alpha, life) {
+    this.screenSplats.push({
+      t: 0, life: life || 0.7, x: x, y: y, c: tintName || 'ink',
+      s: size || 90, a: alpha === undefined ? 0.5 : alpha, r: Math.random() * 6.283
+    });
+  };
+  Fx.clearScreen = function () {
+    this.slashes.length = 0; this.screenSplats.length = 0; this.hitmarks.length = 0;
+  };
+
+  /* ---------- 2D overlay：斩击 / 墨点 / 命中 / 伤害数字 ---------- */
   Fx.drawOverlay = function (camera, dt) {
     var ctx = this.ctx;
     if (!ctx) return;
+    dt = dt || 0;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, this.w, this.h);
+    var i, cx = this.w / 2, cy = this.h / 2;
+    var minD = Math.min(this.w, this.h);
+    // 屏幕墨渍
+    for (i = this.screenSplats.length - 1; i >= 0; i--) {
+      var sp = this.screenSplats[i];
+      sp.t += dt;
+      if (sp.t > sp.life) { this.screenSplats.splice(i, 1); continue; }
+      var k = sp.t / sp.life;
+      ctx.save();
+      ctx.globalAlpha = sp.a * Math.max(0, 1 - k);
+      ctx.translate(sp.x, sp.y);
+      ctx.rotate(sp.r);
+      var img = this.tinted[sp.c] || this.tinted.ink;
+      ctx.drawImage(img, -sp.s / 2, -sp.s / 2, sp.s, sp.s);
+      ctx.restore();
+    }
+    // 斩击弧
+    for (i = this.slashes.length - 1; i >= 0; i--) {
+      var sl = this.slashes[i];
+      sl.t += dt;
+      if (sl.t > sl.life) { this.slashes.splice(i, 1); continue; }
+      var k2 = sl.t / sl.life;
+      var sz = minD * 0.98 * sl.s * (0.88 + k2 * 0.12);
+      ctx.save();
+      ctx.globalAlpha = (1 - k2) * 0.72;
+      ctx.translate(cx, cy);
+      ctx.rotate(sl.a);
+      ctx.drawImage(this.tinted.slash, -sz / 2, -sz / 2, sz, sz);
+      ctx.restore();
+    }
+    // 命中标记
+    for (i = this.hitmarks.length - 1; i >= 0; i--) {
+      var hm = this.hitmarks[i];
+      hm.t += dt;
+      if (hm.t > hm.life) { this.hitmarks.splice(i, 1); continue; }
+      var hk = hm.t / hm.life;
+      var a = 1 - hk;
+      var r0 = 9 + hk * 10, r1 = 20 + hk * 12;
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = hm.kind === 'kill' ? '#C9A45C' : hm.kind === 'heavy' ? '#14120F' : '#B23A2A';
+      ctx.lineWidth = hm.kind === 'kill' ? 3.2 : 2.2;
+      ctx.lineCap = 'round';
+      var dirs = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+      for (var d = 0; d < 4; d++) {
+        var dx = dirs[d][0], dy = dirs[d][1];
+        ctx.beginPath();
+        ctx.moveTo(cx + dx * r0, cy + dy * r0);
+        ctx.lineTo(cx + dx * r1, cy + dy * r1);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     var v = new T.Vector3();
     for (var i = 0; i < this.numbers.length; i++) {
       var n = this.numbers[i];
-      n.t += dt || 0.016;
+      n.t += dt;
       if (n.t > n.life) { this.numbers.splice(i, 1); i--; continue; }
       var k = n.t / n.life;
       v.set(n.x, n.y + k * 0.9, n.z).project(camera);
@@ -339,9 +433,9 @@
       ctx.globalAlpha = Math.max(0, alpha);
       ctx.font = '700 ' + size.toFixed(1) + 'px "Songti SC","STSong",serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.lineWidth = 3.4; ctx.strokeStyle = 'rgba(26,23,20,0.9)';
+      ctx.lineWidth = 4.0; ctx.strokeStyle = 'rgba(237,229,211,0.95)';
       ctx.strokeText(n.val, x, y);
-      ctx.fillStyle = n.kind === 'crit' ? '#FFC24D' : n.kind === 'hurt' ? '#FF8A7A' : '#FFEFD2';
+      ctx.fillStyle = n.kind === 'crit' ? '#B23A2A' : n.kind === 'hurt' ? '#B23A2A' : '#14120F';
       ctx.fillText(n.val, x, y);
     }
     ctx.globalAlpha = 1;
@@ -350,6 +444,7 @@
   Fx.clearNumbers = function () { this.numbers.length = 0; };
 
   Fx.reset = function () {
+    this.clearScreen();
     this.paint.n = 0; this.sparks.n = 0;
     this.paint.geo.setDrawRange(0, 0); this.sparks.geo.setDrawRange(0, 0);
     for (var i = 0; i < this.decals.cap; i++) this.decals.items[i].on = false;

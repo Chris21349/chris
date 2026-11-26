@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#1A1714">
+<meta name="theme-color" content="#EDE5D3">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>彩潮 · CHROMA TIDE</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon-32.png">
@@ -17,6 +17,7 @@
   <canvas id="gl"></canvas>
   <canvas id="fx2d"></canvas>
   <div id="vignette"></div>
+  <div id="weapon" class="hidden"><img src="art/weapon.png" alt=""></div>
   <div id="flash"></div>
 
   <!-- ============ HUD ============ -->
@@ -24,12 +25,9 @@
     <div class="topbar">
       <div class="hud-left">
         <div class="hp-row">
-          <svg class="hp-ic" viewBox="0 0 48 48" aria-hidden="true">
-            <path d="M24 41C10 30.5 6 22.5 8.6 16.4 10.8 11 16.5 9.2 21 12.4L24 15l3-2.6c4.5-3.2 10.2-1.4 12.4 4C42 22.5 38 30.5 24 41z" fill="#C85C6A" stroke="#1A1714" stroke-width="2.5"/>
-            <path d="M19.5 19c-2.6 1-3.6 3.6-3 6.4" fill="none" stroke="#F2E8D5" stroke-width="2" stroke-linecap="round" opacity=".8"/>
-          </svg>
+          <span class="seal-mark">命</span>
           <div class="hp-track"><div id="hp-fill"></div></div>
-          <b id="hp-text">100</b>
+          <b id="hp-text">120</b>
         </div>
         <div class="lv-row">
           <span class="lv-badge">Lv<b id="lv">1</b></span>
@@ -38,7 +36,7 @@
       </div>
       <div class="hud-right">
         <div class="stat"><em>时间</em><b id="time">0:00</b></div>
-        <div class="stat"><em>收割</em><b id="kills">0</b></div>
+        <div class="stat"><em>斩</em><b id="kills">0</b></div>
         <button id="btn-pause" class="icon-btn" aria-label="暂停"><i></i><i></i></button>
       </div>
     </div>
@@ -49,6 +47,11 @@
     </div>
 
     <div id="combo" class="hidden"><em>×</em><b id="combo-n">0</b><span>连斩</span></div>
+
+    <div id="crosshair" aria-hidden="true">
+      <i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i><b></b>
+    </div>
+    <div id="lockhint" class="hidden">点击画面 · 锁定视角</div>
   </div>
 
   <div id="toast" class="toast"></div>
@@ -56,38 +59,39 @@
   <!-- ============ 操作 ============ -->
   <div id="controls" class="hidden">
     <div id="stick-zone"></div>
+    <div id="look-zone"></div>
     <div id="stick" class="hidden"><div class="stick-base"></div><div class="stick-knob"></div></div>
     <div class="actions">
       <button id="btn-ult" class="act ult" aria-label="万彩归一"></button>
+      <button id="btn-heavy" class="act heavy" aria-label="重击"></button>
       <button id="btn-dash" class="act dash" aria-label="闪身"></button>
+      <button id="btn-attack" class="act attack" aria-label="斩击"></button>
     </div>
   </div>
 
   <!-- ============ 标题 ============ -->
   <div id="screen-title" class="screen title-screen hidden">
-    <div class="wash w1"></div>
-    <div class="wash w2"></div>
     <div class="title-inner">
-      <div class="eyebrow">CHROMA TIDE</div>
+      <div class="eyebrow">CHROMA TIDE · 水墨第一人称</div>
       <h1 class="logo"><span>彩</span><span>潮</span></h1>
       <div class="logo-rule"></div>
-      <p class="tagline">把颜色，还给荒原。</p>
-      <div class="best-line" id="best-line">尚无记录 · 第一笔由你落下</div>
-      <button id="btn-start" class="btn-primary btn-start">开始收割</button>
+      <p class="tagline">纸是荒原，墨是兽。落刀的地方，才有颜色。</p>
+      <div class="best-line" id="best-line">尚无记录 · 第一刀由你落下</div>
+      <button id="btn-start" class="btn-primary btn-start">提笔</button>
       <div class="title-links">
         <button id="btn-help" class="btn-link">玩法</button>
         <button id="btn-sound" class="btn-link">音效 · 开</button>
         <button id="btn-save" class="btn-link">存档</button>
       </div>
-      <div class="title-note">竖屏 · 自动攻击 · 单局 6 分钟</div>
+      <div class="title-note">竖屏 · 左摇杆移动 · 右半屏看 · 点击斩</div>
     </div>
   </div>
 
   <!-- ============ 升级 ============ -->
   <div id="screen-levelup" class="screen hidden">
     <div class="panel level-panel">
-      <div class="panel-kicker">颜色在你体内翻涌</div>
-      <h2>选择一笔</h2>
+      <div class="panel-kicker">墨在你腕上翻涌</div>
+      <h2>选一笔</h2>
       <div id="cards" class="cards"></div>
       <div class="key-hint">点击卡牌 · 或按 1 / 2 / 3</div>
     </div>
@@ -97,8 +101,13 @@
   <div id="screen-pause" class="screen hidden">
     <div class="panel">
       <div class="panel-kicker">墨潮暂歇</div>
-      <h2>停笔</h2>
+      <h2>停刀</h2>
       <div id="pause-stats"></div>
+      <div class="sens-row">
+        <span>视角灵敏度</span>
+        <input id="sens" type="range" min="0.5" max="2" step="0.1" value="1">
+        <b id="sens-val">1.0</b>
+      </div>
       <div class="panel-actions">
         <button id="btn-resume" class="btn-primary">继续</button>
         <div class="row">
@@ -118,11 +127,11 @@
   <div id="screen-end" class="screen hidden">
     <div class="panel end-panel">
       <div class="panel-kicker" id="end-kicker"></div>
-      <h2 id="end-title">潮水退去</h2>
+      <h2 id="end-title">墨干</h2>
       <div id="end-stats"></div>
       <div id="end-best"></div>
       <div class="panel-actions">
-        <button id="btn-again" class="btn-primary">再来一局</button>
+        <button id="btn-again" class="btn-primary">再写一局</button>
         <button id="btn-home" class="btn-ghost">回到标题</button>
       </div>
     </div>
@@ -163,7 +172,7 @@ document.addEventListener('pointerdown', function () { if (window.CT && CT.Sound
 (function () {
   var local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
   if ('serviceWorker' in navigator && !/[?&]app=1/.test(location.search) && !local && location.protocol.indexOf('http') === 0) {
-    window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js?v=1.0.1').catch(function () { }); });
+    window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js?v=1.1.0').catch(function () { }); });
   }
 })();
 </script>

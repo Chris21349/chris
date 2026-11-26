@@ -1,15 +1,15 @@
 {
   "name": "彩潮 · CHROMA TIDE",
   "short_name": "彩潮",
-  "description": "3D 手绘感割草肉鸽：在彩墨荒原上收割墨兽，把颜色还给大地。",
+  "description": "水墨第一人称割草肉鸽：纸是荒原，墨是兽，落刀的地方才有颜色。",
   "lang": "zh-CN",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1A1714",
-  "theme_color": "#1A1714",
+  "background_color": "#EDE5D3",
+  "theme_color": "#EDE5D3",
   "categories": [
     "games",
     "entertainment"
