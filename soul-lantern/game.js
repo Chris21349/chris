@@ -5,7 +5,7 @@
 (() => {
 'use strict';
 
-const VERSION = '7.4.3';
+const VERSION = '7.5.0';
 const STORAGE_KEY = 'soul-lantern:v1:save';
 const LEGACY_KEY = 'soul-lantern-save-v1';
 
@@ -735,7 +735,7 @@ function killEnemy(e) {
   }
   burst(e.x, e.y, e.boss ? 26 : 6, '#f0c674', { spd: 150, size: 2, life: 0.4 });
   // 聚魂铃：低概率掉落
-  const dropChance = e.boss ? 1 : e.elite ? 0.09 : 0.012;
+  const dropChance = e.boss ? 1 : e.elite ? 0.12 : 0.018;
   if (Math.random() < dropChance) {
     G.items.push({ x: e.x, y: e.y, type: 'magnet', t: 0, life: 26, bob: rnd(TAU) });
     ring(e.x, e.y, 34, '#ffe6a8', 0.4, 2);
@@ -1208,9 +1208,11 @@ function updateCompass(dt, lv, form) {
     // 锁链：从盘面射向每一个被点名的鬼，并且继续延伸到屏幕外
     p.cd.chain = (p.cd.chain || 0) - dt;
     if (p.cd.chain <= 0) {
-      p.cd.chain = 0.12;
+      p.cd.chain = 0.16;
+      const chainCap = 10;
       for (const e of G.enemies) {
         if (!e.alive || e.judgeT <= 0) continue;
+        if (G.chains.length >= chainCap) break;
         const a = Math.atan2(e.y - p.y, e.x - p.x);
         const far = 900;
         G.chains.push({
@@ -1221,9 +1223,9 @@ function updateCompass(dt, lv, form) {
           life: 0.28, max: 0.28
         });
       }
-      // 额外的环身锁链
-      for (let i = 0; i < 3; i++) {
-        const a = p.dialAng * 1.7 + i / 3 * TAU;
+      // 额外的环身锁链（总量仍受 10 根限制）
+      for (let i = 0; i < 2 && G.chains.length < chainCap; i++) {
+        const a = p.dialAng * 1.7 + i / 2 * TAU;
         G.chains.push({
           x1: p.x, y1: p.y,
           x2: p.x + Math.cos(a) * 900, y2: p.y + Math.sin(a) * 900,
@@ -1607,14 +1609,16 @@ function updateSuona(dt, lv, form) {
   const p = G.player;
   const aim = (p.aim !== undefined ? p.aim : 0);
   const dmg = 24 * (1 + (lv - 1) * 0.16) * p.dmgMul;
+  p.suonaT = (p.suonaT || 0) + dt;
+  if (p.suonaKick > 0) p.suonaKick -= dt;
 
   if (form === 'mutate') {
-    // 丧音：持续的宽锥
+    // ── 丧音：整片战场被压住，每隔一阵砸一记丧钟 ──
     p.cd.suona = (p.cd.suona || 0) - dt;
     if (p.cd.suona <= 0) {
-      p.cd.suona = 0.35;
-      const range = 340, arc = 1.3;
-      G.cones.push({ x: p.x, y: p.y, ang: aim, range, arc, life: 0.3, max: 0.3, dark: true });
+      p.cd.suona = 0.3;
+      const range = 420, arc = 1.5;
+      G.cones.push({ x: p.x, y: p.y, ang: aim, range, arc, life: 0.32, max: 0.32, dark: true });
       for (const e of G.enemies) {
         if (!e.alive) continue;
         const d = dist(p.x, p.y, e.x, e.y);
@@ -1623,10 +1627,40 @@ function updateSuona(dt, lv, form) {
         while (da > Math.PI) da -= TAU;
         while (da < -Math.PI) da += TAU;
         if (Math.abs(da) < arc / 2) {
-          damageEnemy(e, dmg * 0.45, { knock: 20, fromX: p.x, fromY: p.y });
-          e.slow = 0.5; e.slowT = 0.6;
+          damageEnemy(e, dmg * 0.5, { knock: 26, fromX: p.x, fromY: p.y });
+          e.slow = 0.62; e.slowT = 0.7;
+          // 往唢呐口拖
+          const a2 = Math.atan2(p.y - e.y, p.x - e.x);
+          e.kx += Math.cos(a2) * 90; e.ky += Math.sin(a2) * 90;
         }
       }
+      if (Math.random() < 0.25) Sound.horn();
+    }
+
+    // 丧钟：每 2.2 秒一记，全场压下去
+    p.cd.slam = (p.cd.slam || 2.2) - dt;
+    if (p.cd.slam <= 0) {
+      p.cd.slam = 2.2 / p.atkMul;
+      const R = 360;
+      for (let i = 0; i < 5; i++) {
+        ring(p.x, p.y, R * (0.35 + i * 0.16), i % 2 ? '#ff8a6a' : '#5a1a12', 0.9 - i * 0.1, Math.max(3, 12 - i * 2));
+      }
+      ring(p.x, p.y, R * 0.5, '#ffffff', 0.4, 14);
+      G.pillars.push({ x: p.x, y: p.y + 120, w: 34, h: 620, life: 0.6, max: 0.6, col: 'rgba(120,20,16,0.6)' });
+      for (const e of G.enemies) {
+        if (!e.alive) continue;
+        const d = dist(p.x, p.y, e.x, e.y);
+        if (d > R) continue;
+        damageEnemy(e, dmg * 2.4, { knock: 240, fromX: p.x, fromY: p.y });
+        e.slow = 0.8; e.slowT = 1.6;
+        markEnemy(e, 2.5, 1.4);
+      }
+      for (let i = 0; i < 26; i++) {
+        const a = Math.random() * TAU, rr = 40 + Math.random() * R;
+        G.parts.push({ x: p.x + Math.cos(a) * rr, y: p.y + Math.sin(a) * rr, vx: rnd(30, -30), vy: rnd(-40, -140), life: 0.9, max: 0.9, size: rnd(4, 2), col: i % 3 ? '#ff8a6a' : '#ffd0b0', type: 'spark', drag: 1.2 });
+      }
+      G.flash = Math.max(G.flash, 0.3); G.flashColor = '#7a1a12';
+      shake(11); hitstop(40); Sound.boom(); Sound.bell(); haptic(14);
     }
     return;
   }
@@ -1634,11 +1668,10 @@ function updateSuona(dt, lv, form) {
   p.cd.suona = (p.cd.suona || 0) - dt;
   if (p.cd.suona > 0) return;
   const awake = form === 'awake';
-  p.cd.suona = (awake ? 1.9 : 1.35) / p.atkMul;
-  const range = awake ? 380 : (250 + lv * 16);
-  const arc = awake ? 1.2 : 0.8;
-  G.cones.push({ x: p.x, y: p.y, ang: aim, range, arc, life: 0.35, max: 0.35 });
-  ring(p.x, p.y, range * 0.5, '#ffe0a8', 0.4, 3);
+  p.cd.suona = (awake ? 1.8 : 1.35) / p.atkMul;
+  const range = awake ? 460 : (250 + lv * 16);
+  const arc = awake ? 1.35 : 0.8;
+  G.cones.push({ x: p.x, y: p.y, ang: aim, range, arc, life: 0.38, max: 0.38 });
   for (const e of G.enemies) {
     if (!e.alive) continue;
     const d = dist(p.x, p.y, e.x, e.y);
@@ -1647,17 +1680,44 @@ function updateSuona(dt, lv, form) {
     while (da > Math.PI) da -= TAU;
     while (da < -Math.PI) da += TAU;
     if (Math.abs(da) < arc / 2) {
-      damageEnemy(e, dmg * (awake ? 1.3 : 1), { knock: 300, fromX: p.x, fromY: p.y });
+      damageEnemy(e, dmg * (awake ? 1.5 : 1), { knock: 340, fromX: p.x, fromY: p.y });
     }
   }
+
   if (awake) {
-    for (let i = 0; i < 6; i++) {
-      const a = aim + (i - 2.5) * 0.22;
-      G.shots.push({ type: 'bird', x: p.x, y: p.y, vx: Math.cos(a) * 420, vy: Math.sin(a) * 420, dmg: dmg * 0.8, life: 1.6, rot: a, hitSet: new Set(), pierce: 2 });
+    // ── 百鸟朝凤：大喇叭口炸开五重声浪，百鸟成阵扑出去 ──
+    p.suonaKick = 0.36;
+    for (let i = 0; i < 5; i++) {
+      ring(p.x, p.y, range * (0.32 + i * 0.17), i % 2 ? '#ffd27a' : '#fff2d0', 0.75 - i * 0.08, Math.max(3, 10 - i * 1.6));
     }
+    G.cones.push({ x: p.x, y: p.y, ang: aim, range: 480, arc: 1.1, life: 0.5, max: 0.5, sound: true });
+    G.flash = Math.max(G.flash, 0.28); G.flashColor = '#ffe0a8';
+    shake(9); haptic(10);
+    // 三段鸟阵
+    for (let row = 0; row < 3; row++) {
+      const n = 5 + row * 2;
+      for (let i = 0; i < n; i++) {
+        const off = (i - (n - 1) / 2) * 0.12;
+        const a = aim + off;
+        const back = 30 + row * 26;
+        G.shots.push({
+          type: 'bird', x: p.x - Math.cos(aim) * back, y: p.y - Math.sin(aim) * back,
+          vx: Math.cos(a) * (520 + row * 40), vy: Math.sin(a) * (520 + row * 40),
+          dmg: dmg * 0.75, life: 1.8, rot: a, hitSet: new Set(), pierce: 2, big: true
+        });
+      }
+    }
+    for (let i = 0; i < 16; i++) {
+      const a = aim + rnd(0.9, -0.9);
+      G.parts.push({ x: p.x + Math.cos(a) * 40, y: p.y + Math.sin(a) * 40, vx: Math.cos(a) * rnd(420, 120), vy: Math.sin(a) * rnd(420, 120), life: 0.7, max: 0.7, size: rnd(3, 1.6), col: '#fff2d0', type: 'spark', drag: 1.4 });
+    }
+    Sound.horn(); Sound.crit();
+  } else {
+    ring(p.x, p.y, range * 0.5, '#ffe0a8', 0.4, 3);
+    Sound.horn();
   }
-  Sound.horn();
 }
+
 
 /* 纸马 */
 function updateHorse(dt, lv, form) {
@@ -2111,6 +2171,9 @@ function updateShots(dt) {
       if (s.life <= 0) s.alive = false;
     } else if (s.type === 'horse' || s.type === 'bird') {
       s.x += s.vx * dt; s.y += s.vy * dt;
+      if (s.type === 'bird') {
+        G.parts.push({ x: s.x - s.vx * 0.02, y: s.y - s.vy * 0.02, vx: rnd(20, -20), vy: rnd(20, -20), life: 0.35, max: 0.35, size: 2.2, col: s.big ? '#ffe9b8' : '#fff6e0', type: 'spark', drag: 2 });
+      }
       if (!s.hitSet) s.hitSet = new Set();
       for (const e of G.enemies) {
         if (!e.alive || s.hitSet.has(e)) continue;
@@ -2194,6 +2257,7 @@ function updateShots(dt) {
       ctx.save();
       ctx.translate(s.x, s.y);
       ctx.rotate(s.rot);
+      if (s.big) ctx.scale(2.2, 2.2);
       const flap = Math.sin(t * 26) * 0.6;
       ctx.fillStyle = 'rgba(255,246,220,0.95)';
       ctx.beginPath();
@@ -2313,6 +2377,9 @@ function updateShots(dt) {
       if (s.life <= 0) s.alive = false;
     } else if (s.type === 'horse' || s.type === 'bird') {
       s.x += s.vx * dt; s.y += s.vy * dt;
+      if (s.type === 'bird') {
+        G.parts.push({ x: s.x - s.vx * 0.02, y: s.y - s.vy * 0.02, vx: rnd(20, -20), vy: rnd(20, -20), life: 0.35, max: 0.35, size: 2.2, col: s.big ? '#ffe9b8' : '#fff6e0', type: 'spark', drag: 2 });
+      }
       if (!s.hitSet) s.hitSet = new Set();
       for (const e of G.enemies) {
         if (!e.alive || s.hitSet.has(e)) continue;
@@ -2396,6 +2463,7 @@ function updateShots(dt) {
       ctx.save();
       ctx.translate(s.x, s.y);
       ctx.rotate(s.rot);
+      if (s.big) ctx.scale(2.2, 2.2);
       const flap = Math.sin(t * 26) * 0.6;
       ctx.fillStyle = 'rgba(255,246,220,0.95)';
       ctx.beginPath();
@@ -2746,17 +2814,27 @@ function updateWorld(dt) {
   for (const it of G.items) {
     it.t += dt; it.life -= dt;
     const d = dist(G.player.x, G.player.y, it.x, it.y);
+    if (d < 200) {
+      const a = Math.atan2(G.player.y - it.y, G.player.x - it.x);
+      const sp = 60 + (200 - d) * 2.2;
+      it.x += Math.cos(a) * sp * dt;
+      it.y += Math.sin(a) * sp * dt;
+    }
     if (d < 46) {
       it.life = 0;
       // 聚魂铃：全图魂火一起飞过来
-      for (const o of G.orbs) { o.pull = true; o.vac = true; }
-      ring(G.player.x, G.player.y, 260, '#ffe6a8', 0.6, 6);
-      ring(G.player.x, G.player.y, 160, '#fff6d8', 0.45, 3);
-      burst(G.player.x, G.player.y, 22, '#ffe6a8', { spd: 300, size: 3, life: 0.6 });
-      G.flash = Math.max(G.flash, 0.12); G.flashColor = '#ffe6b8';
-      dmgText(G.player.x, G.player.y - 40, '聚魂铃', '#ffe6a8', 15);
-      Sound.pickup(); Sound.bell();
-      toast('聚魂铃 · 满图魂火归身');
+      let n = 0, total = 0;
+      for (const o of G.orbs) { o.pull = true; o.vac = true; n++; total += o.val || 1; }
+      for (let i = 0; i < 4; i++) {
+        ring(G.player.x, G.player.y, 120 + i * 90, i % 2 ? '#ffe6a8' : '#fff8e0', 0.75 - i * 0.1, Math.max(3, 12 - i * 2));
+      }
+      G.pillars.push({ x: G.player.x, y: G.player.y + 100, w: 26, h: 520, life: 0.5, max: 0.5, col: 'rgba(255,226,150,0.55)' });
+      burst(G.player.x, G.player.y, 34, '#ffe6a8', { spd: 380, size: 3.4, life: 0.7 });
+      G.flash = Math.max(G.flash, 0.3); G.flashColor = '#ffe6b8';
+      dmgText(G.player.x, G.player.y - 46, '聚魂 +' + total, '#ffe6a8', 18);
+      shake(5);
+      Sound.bell(); Sound.pickup(); Sound.crit();
+      toast('聚魂铃 · 吸来 ' + n + ' 颗魂火');
     }
   }
   compact(G.items, it => it.life > 0);
@@ -3104,22 +3182,68 @@ function drawBladeFx(t) {
   }
 }
 
-function drawCones() {
+function drawCones(t) {
   for (const c of G.cones) {
     const k = c.life / c.max;
     ctx.save();
     ctx.translate(c.x, c.y);
     ctx.rotate(c.ang);
-    const g = ctx.createLinearGradient(0, 0, c.range, 0);
-    g.addColorStop(0, `rgba(255,246,214,${0.42 * k})`);
-    g.addColorStop(0.6, `rgba(255,220,150,${0.22 * k})`);
-    g.addColorStop(1, 'rgba(255,200,120,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.arc(0, 0, c.range, -c.arc / 2, c.arc / 2);
-    ctx.closePath();
-    ctx.fill();
+    if (c.bone) {
+      const gb = ctx.createLinearGradient(0, 0, c.range, 0);
+      gb.addColorStop(0, `rgba(255,244,220,${0.45 * k})`);
+      gb.addColorStop(0.5, `rgba(226,206,176,${0.28 * k})`);
+      gb.addColorStop(1, 'rgba(200,170,140,0)');
+      ctx.fillStyle = gb;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, c.range, -c.arc / 2, c.arc / 2); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = `rgba(255,250,238,${0.35 * k})`;
+      ctx.lineWidth = 1.4;
+      for (let i = 1; i <= 4; i++) {
+        ctx.beginPath(); ctx.arc(0, 0, c.range * i / 5, -c.arc / 2, c.arc / 2); ctx.stroke();
+      }
+    } else if (c.dark) {
+      const gd = ctx.createLinearGradient(0, 0, c.range, 0);
+      gd.addColorStop(0, `rgba(190,50,36,${0.42 * k})`);
+      gd.addColorStop(0.6, `rgba(120,20,14,${0.3 * k})`);
+      gd.addColorStop(1, 'rgba(60,6,4,0)');
+      ctx.fillStyle = gd;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, c.range, -c.arc / 2, c.arc / 2); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = `rgba(255,120,90,${0.5 * k})`;
+      ctx.lineWidth = 2;
+      for (let i = 1; i <= 5; i++) {
+        const rr = c.range * (i / 6) + Math.sin(t * 6 + i) * 6;
+        ctx.beginPath(); ctx.arc(0, 0, rr, -c.arc / 2, c.arc / 2); ctx.stroke();
+      }
+    } else if (c.sound) {
+      const gs = ctx.createLinearGradient(0, 0, c.range, 0);
+      gs.addColorStop(0, `rgba(255,250,224,${0.55 * k})`);
+      gs.addColorStop(0.35, `rgba(255,224,150,${0.38 * k})`);
+      gs.addColorStop(1, 'rgba(255,190,90,0)');
+      ctx.fillStyle = gs;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, c.range, -c.arc / 2, c.arc / 2); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = `rgba(255,240,200,${0.7 * k})`;
+      ctx.lineWidth = 2.4;
+      for (let i = 1; i <= 6; i++) {
+        const rr = c.range * (i / 7) + Math.sin(t * 22 + i * 1.7) * 8;
+        ctx.beginPath(); ctx.arc(0, 0, rr, -c.arc / 2, c.arc / 2); ctx.stroke();
+      }
+      ctx.strokeStyle = `rgba(255,255,240,${0.5 * k})`;
+      ctx.lineWidth = 1.2;
+      for (let i = -2; i <= 2; i++) {
+        const aa = c.arc / 2 * i / 2.6;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(aa) * c.range, Math.sin(aa) * c.range); ctx.stroke();
+      }
+    } else {
+      const g = ctx.createLinearGradient(0, 0, c.range, 0);
+      g.addColorStop(0, `rgba(255,246,214,${0.42 * k})`);
+      g.addColorStop(0.6, `rgba(255,220,150,${0.22 * k})`);
+      g.addColorStop(1, 'rgba(255,200,120,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, c.range, -c.arc / 2, c.arc / 2);
+      ctx.closePath();
+      ctx.fill();
+    }
     ctx.restore();
   }
 }
@@ -3650,16 +3774,68 @@ function drawWeaponAuras(t) {
     ctx.globalAlpha = 1;
   }
 
-  // 唢呐：声纹
+  // 唢呐：铜喇叭 + 声纹 / 丧音
   if (wLevel('suona') > 0 && awForm('suona')) {
+    const mut = awForm('suona') === 'mutate';
+    const kick = Math.max(0, p.suonaKick || 0);
+    const aimA = (p.aim !== undefined ? p.aim : 0);
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.globalAlpha = 0.35;
-    ctx.strokeStyle = 'rgba(255,220,150,0.8)';
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 3; i++) {
-      const rr = 40 + ((t * 90 + i * 40) % 120);
-      ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.stroke();
+    if (!mut) {
+      // 金喇叭
+      ctx.save();
+      ctx.rotate(aimA);
+      const back = 18 + kick * 40;
+      ctx.translate(-back, 0);
+      // 杆
+      ctx.fillStyle = '#d9a94e';
+      ctx.fillRect(0, -4, 34, 8);
+      // 喇叭口
+      const hg = ctx.createLinearGradient(30, 0, 62, 0);
+      hg.addColorStop(0, 'rgba(255,226,150,0.95)');
+      hg.addColorStop(0.5, 'rgba(255,190,90,0.95)');
+      hg.addColorStop(1, 'rgba(160,90,20,0.9)');
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.moveTo(30, -6);
+      ctx.lineTo(62, -22);
+      ctx.lineTo(62, 22);
+      ctx.lineTo(30, 6);
+      ctx.closePath();
+      ctx.fill();
+      // 喇叭口高光
+      ctx.strokeStyle = 'rgba(255,250,220,0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(62, 0, 4, 22, 0, 0, TAU); ctx.stroke();
+      // 吹口
+      ctx.fillStyle = '#6b4a20';
+      ctx.fillRect(-6, -3, 8, 6);
+      ctx.restore();
+      // 声纹
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = 'rgba(255,224,160,0.85)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        const rr = 46 + ((t * 120 + i * 46) % 150);
+        ctx.beginPath(); ctx.arc(0, 0, rr, aimA - 0.7, aimA + 0.7); ctx.stroke();
+      }
+    } else {
+      // 丧音：暗红符环 + 奠字
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = 'rgba(255,120,90,0.75)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 2; i++) {
+        ctx.beginPath(); ctx.arc(0, 0, 120 + i * 40 + Math.sin(t * 2 + i) * 6, 0, TAU); ctx.stroke();
+      }
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = 'rgba(255,140,110,0.9)';
+      ctx.font = '13px "Songti SC",serif';
+      ctx.textAlign = 'center';
+      for (let i = 0; i < 6; i++) {
+        const a = i / 6 * TAU - t * 0.35;
+        ctx.fillText('奠', Math.cos(a) * 150, Math.sin(a) * 150 + 5);
+      }
+      ctx.textAlign = 'left';
     }
     ctx.restore();
     ctx.globalAlpha = 1;
@@ -4239,6 +4415,7 @@ function drawShots(t) {
       ctx.save();
       ctx.translate(s.x, s.y);
       ctx.rotate(s.rot);
+      if (s.big) ctx.scale(2.2, 2.2);
       const flap = Math.sin(t * 26) * 0.6;
       ctx.fillStyle = 'rgba(255,246,220,0.95)';
       ctx.beginPath();
@@ -4420,6 +4597,7 @@ function drawShots(t) {
       ctx.save();
       ctx.translate(s.x, s.y);
       ctx.rotate(s.rot);
+      if (s.big) ctx.scale(2.2, 2.2);
       const flap = Math.sin(t * 26) * 0.6;
       ctx.fillStyle = 'rgba(255,246,220,0.95)';
       ctx.beginPath();
@@ -4558,6 +4736,7 @@ function drawShots(t) {
       ctx.save();
       ctx.translate(s.x, s.y);
       ctx.rotate(s.rot);
+      if (s.big) ctx.scale(2.2, 2.2);
       const flap = Math.sin(t * 26) * 0.6;
       ctx.fillStyle = 'rgba(255,246,220,0.95)';
       ctx.beginPath();
@@ -5360,7 +5539,7 @@ function render(t) {
   drawChains(t);
   drawInkLines(t);
   drawVortices(t);
-  drawCones();
+  drawCones(t);
   drawBeams();
   drawRingFx();
   drawSealRings();
