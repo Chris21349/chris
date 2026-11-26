@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="引魂灯">
 <meta name="description" content="引魂灯 · 长夜无尽，唯灯不熄。竖屏单指动作生存，提灯走夜路，斩尽魑魅。">
 <title>引魂灯 · 长夜无尽</title>
-<link rel="manifest" href="manifest.webmanifest?v=7.5.0">
+<link rel="manifest" href="manifest.webmanifest?v=7.6.0">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
@@ -83,7 +83,7 @@ canvas#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-acti
 #btnPause{pointer-events:auto;margin-top:2px;width:30px;height:30px;border:1px solid rgba(240,198,116,.28);border-radius:2px;
   background:rgba(10,14,19,.5);color:#e3cfa2;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .wpnrow{position:fixed;left:0;right:0;bottom:calc(var(--safe-b) + 8px);display:flex;justify-content:center;gap:8px;pointer-events:none}
-.wpn{width:34px;height:34px;border:1px solid rgba(240,198,116,.22);border-radius:50%;background:rgba(10,14,19,.62);
+.wpn{pointer-events:auto;cursor:pointer;width:34px;height:34px;border:1px solid rgba(240,198,116,.22);border-radius:50%;background:rgba(10,14,19,.62);
   display:flex;align-items:center;justify-content:center;font-size:15px;color:#f0c674;position:relative;overflow:hidden}
 .wpn .cd{position:absolute;inset:0;background:rgba(0,0,0,.55);transform-origin:bottom}
 .wpn em{position:absolute;right:-3px;bottom:-3px;font-size:8px;font-style:normal;background:#f0c674;color:#1a1206;border-radius:2px;padding:0 3px;line-height:12px}
@@ -245,6 +245,32 @@ canvas#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-acti
 @media (min-width:760px){
   .screen{padding-left:max(20px,calc(50vw - 320px));padding-right:max(20px,calc(50vw - 320px))}
 }
+
+#wpnInfo{position:fixed;inset:0;z-index:60;display:none;align-items:flex-end;justify-content:center;
+  background:rgba(4,6,9,.62);backdrop-filter:blur(3px);padding:0 12px calc(env(safe-area-inset-bottom,0px) + 64px)}
+#wpnInfo.on{display:flex}
+#wpnInfo .sheet{width:100%;max-width:420px;max-height:64vh;overflow:auto;border:1px solid rgba(240,198,116,.22);
+  border-radius:14px;background:linear-gradient(180deg,rgba(16,20,27,.97),rgba(9,12,17,.97));padding:14px}
+#wpnInfo h3{font-family:"Songti SC",serif;font-size:17px;color:#f0c674;letter-spacing:.2em;margin:0 0 10px;text-align:center}
+.wi-row{display:flex;gap:10px;padding:9px 4px;border-top:1px solid rgba(255,255,255,.05)}
+.wi-glyph{width:34px;height:34px;flex:0 0 34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:"Songti SC",serif;color:#f0c674;border:1px solid rgba(240,198,116,.3);background:rgba(10,14,19,.7)}
+.wi-main{flex:1;min-width:0}
+.wi-name{font-size:14px;color:#f4ead2;display:flex;align-items:center;gap:6px}
+.wi-lv{font-size:11px;color:#8fa4bb}
+.wi-desc{font-size:12px;line-height:1.55;color:#9fb0c4;margin-top:3px}
+.wi-desc b{color:#ffd08a;font-weight:600}
+.wi-form{font-size:10px;padding:1px 6px;border-radius:99px;border:1px solid rgba(240,198,116,.35);color:#f0c674}
+.wi-form.mutate{color:#ff8a6a;border-color:rgba(255,120,90,.45)}
+#wpnInfoClose{margin-top:10px;width:100%;padding:10px;border-radius:10px;border:1px solid rgba(240,198,116,.3);
+  background:rgba(240,198,116,.12);color:#f0c674;font-size:14px;letter-spacing:.2em}
+#pick .wgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+#pick .wcard{position:relative;padding:10px 6px;border-radius:10px;border:1px solid rgba(240,198,116,.2);
+  background:rgba(12,16,22,.8);text-align:center;cursor:pointer}
+#pick .wcard .g{font-family:"Songti SC",serif;font-size:20px;color:#f0c674}
+#pick .wcard .n{font-size:11px;color:#c9d6e4;margin-top:4px}
+#pick .wcard.sel{border-color:#f0c674;background:rgba(240,198,116,.16);box-shadow:0 0 0 1px rgba(240,198,116,.35) inset}
+#pick .wcard.lock{opacity:.32;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -266,7 +292,25 @@ canvas#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-acti
   </div>
   <div class="wpnrow" id="wpnRow"></div>
 </div>
+<div id="wpnInfo"><div class="sheet">
+  <h3>灯 器</h3>
+  <div id="wpnInfoList"></div>
+  <button id="wpnInfoClose">收 起</button>
+</div></div>
 <div id="tip">拖动屏幕 · 提灯而行</div>
+
+<!-- 开局选灯器 -->
+<div class="screen center" id="pick">
+  <div class="panel" style="max-width:380px">
+    <h2 class="serif">择 一 盏 灯</h2>
+    <div class="hint">开局带你最顺手的那件（只列已解锁）</div>
+    <div class="wgrid" id="pickGrid"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn ghost" id="btnPickBack">返 回</button>
+      <button class="btn primary" id="btnPickGo">入 夜</button>
+    </div>
+  </div>
+</div>
 
 <!-- 标题 -->
 <div class="screen on" id="title">
@@ -290,7 +334,7 @@ canvas#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-acti
     <span>最长夜 <b id="bestTime">00:00</b></span>
     <span>魂火 <b id="soulCount">0</b></span>
   </div>
-  <div class="ver">v7.5.0</div>
+  <div class="ver">v7.6.0</div>
 </div>
 
 <!-- 灯谱 -->
@@ -413,7 +457,7 @@ canvas#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-acti
 <div id="toast"></div>
 <div id="fade"></div>
 
-<script src="story.js?v=7.5.0"></script>
-<script src="game.js?v=7.5.0"></script>
+<script src="story.js?v=7.6.0"></script>
+<script src="game.js?v=7.6.0"></script>
 </body>
 </html>
