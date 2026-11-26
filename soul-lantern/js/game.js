@@ -279,14 +279,27 @@
     document.addEventListener('keyup', function (e) { self.keys[e.code] = false; });
 
     var canvas = this.renderer.domElement;
+    var drag = { active: false, moved: 0, lx: 0, ly: 0 };
     canvas.addEventListener('mousedown', function (e) {
       if (self.state !== 'playing') return;
       if (e.button === 0) {
-        if (!CT.UI.touch && document.pointerLockElement !== canvas) { self.requestLock(); return; }
-        self.attack();
+        if (document.pointerLockElement === canvas) self.attack();
+        else { drag.active = true; drag.moved = 0; drag.lx = e.clientX; drag.ly = e.clientY; }
       } else if (e.button === 2) {
         self.tryHeavy();
       }
+    });
+    window.addEventListener('mousemove', function (e) {
+      if (!drag.active || document.pointerLockElement === canvas) return;
+      var dx = e.clientX - drag.lx, dy = e.clientY - drag.ly;
+      drag.lx = e.clientX; drag.ly = e.clientY;
+      drag.moved += Math.abs(dx) + Math.abs(dy);
+      if (drag.moved > 4) self.look(dx * 1.25, dy * 1.25);
+    });
+    window.addEventListener('mouseup', function () {
+      if (!drag.active) return;
+      drag.active = false;
+      if (drag.moved < 6) self.attack();
     });
     canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     document.addEventListener('mousemove', function (e) {
