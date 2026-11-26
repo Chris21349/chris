@@ -2,462 +2,170 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,maximum-scale=1">
-<meta name="theme-color" content="#07090d">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1A1714">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="引魂灯">
-<meta name="description" content="引魂灯 · 长夜无尽，唯灯不熄。竖屏单指动作生存，提灯走夜路，斩尽魑魅。">
-<title>引魂灯 · 长夜无尽</title>
-<link rel="manifest" href="manifest.webmanifest?v=7.6.0">
-<link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<style>
-:root{
-  --bg:#07090d;
-  --ink:#0d1219;
-  --ink2:#141b24;
-  --gold:#f0c674;
-  --gold-dim:#a8863f;
-  --flame:#ffb35c;
-  --jade:#6fd9bd;
-  --red:#d9503f;
-  --paper:#efe2c4;
-  --text:#e8e2d4;
-  --muted:#8b8578;
-  --safe-t:env(safe-area-inset-top,0px);
-  --safe-b:env(safe-area-inset-bottom,0px);
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);
-  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
-  user-select:none;-webkit-user-select:none;overscroll-behavior:none;touch-action:none}
-canvas#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
-.serif{font-family:"Songti SC","Noto Serif SC","STSong",serif}
-
-/* ---------- 通用屏幕 ---------- */
-.screen{position:fixed;inset:0;display:none;flex-direction:column;z-index:20;
-  padding:calc(var(--safe-t) + 14px) 20px calc(var(--safe-b) + 14px);
-  background:radial-gradient(120% 90% at 50% 30%,rgba(12,17,24,.86),rgba(5,7,10,.97));
-  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
-.screen.on{display:flex}
-.screen.center{align-items:center;justify-content:center}
-
-/* ---------- 标题 ---------- */
-#title{justify-content:center;align-items:center;text-align:center;gap:0;
-  background:radial-gradient(90% 60% at 50% 46%,rgba(255,179,92,.10),rgba(5,7,10,.92) 62%,#04060a 100%)}
-.brand{margin-bottom:6px}
-.brand .zh{font-size:clamp(46px,15vw,74px);letter-spacing:.16em;text-indent:.16em;line-height:1.08;
-  color:#f6e6c2;text-shadow:0 0 26px rgba(255,170,80,.45),0 0 60px rgba(255,140,50,.22)}
-.brand .sub{margin-top:12px;color:#9a8f79;font-size:13px;letter-spacing:.42em;text-indent:.42em}
-.rule{width:120px;height:1px;margin:22px auto;background:linear-gradient(90deg,transparent,rgba(240,198,116,.7),transparent)}
-.btn{appearance:none;border:1px solid rgba(240,198,116,.34);background:linear-gradient(180deg,rgba(240,198,116,.12),rgba(240,198,116,.03));
-  color:#f4e3bd;border-radius:2px;font-size:17px;letter-spacing:.28em;text-indent:.28em;padding:15px 30px;min-width:190px;
-  font-family:inherit;transition:transform .12s,box-shadow .2s,background .2s;cursor:pointer}
-.btn:active{transform:scale(.97)}
-.btn.primary{background:linear-gradient(180deg,rgba(255,179,92,.28),rgba(214,120,40,.16));border-color:rgba(255,196,120,.75);
-  box-shadow:0 0 30px rgba(255,150,60,.20) inset,0 0 18px rgba(255,150,60,.12)}
-.btn.ghost{background:transparent;border-color:rgba(255,255,255,.14);color:#c9c2b2;letter-spacing:.2em;font-size:15px;padding:12px 22px;min-width:150px}
-.btn:disabled{opacity:.4}
-.menu{display:flex;flex-direction:column;gap:12px;margin-top:30px;align-items:center}
-.btn-row{display:flex;gap:10px}
-.foot-stat{margin-top:34px;color:#7d7768;font-size:12px;letter-spacing:.12em;display:flex;gap:18px;justify-content:center}
-.foot-stat b{color:#d9b877;font-weight:600}
-.ver{position:absolute;bottom:calc(var(--safe-b) + 10px);left:0;right:0;text-align:center;color:#4d4a43;font-size:10px;letter-spacing:.2em}
-
-/* ---------- HUD ---------- */
-#hud{position:fixed;inset:0;z-index:10;pointer-events:none;display:none;
-  padding:calc(var(--safe-t) + 8px) 14px 0}
-#hud.on{display:block}
-.hud-top{display:flex;align-items:flex-start;gap:10px}
-.bar-wrap{flex:1;min-width:0}
-.hpbar{height:13px;border:1px solid rgba(217,80,63,.5);border-radius:2px;background:rgba(20,8,8,.55);position:relative;overflow:hidden}
-.hpbar i{position:absolute;inset:0;transform-origin:left center;background:linear-gradient(180deg,#f2715c,#a8291d);transition:transform .18s ease-out}
-.hpbar b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;letter-spacing:.08em;color:#ffe3da;font-weight:500;text-shadow:0 1px 2px #000}
-.xpbar{height:4px;margin-top:6px;background:rgba(240,198,116,.10);border-radius:2px;overflow:hidden;position:relative}
-.xpbar i{position:absolute;inset:0;transform-origin:left center;background:linear-gradient(90deg,#8fd8c4,#f0c674);transition:transform .2s ease-out}
-.hud-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
-.timer{font-size:19px;letter-spacing:.06em;color:#f2e4c6;text-shadow:0 0 12px rgba(0,0,0,.8);font-variant-numeric:tabular-nums}
-.kills{font-size:10px;color:#a99c82;letter-spacing:.1em}
-.lvl{font-size:10px;color:#e0be7d;letter-spacing:.1em}
-#btnPause{pointer-events:auto;margin-top:2px;width:30px;height:30px;border:1px solid rgba(240,198,116,.28);border-radius:2px;
-  background:rgba(10,14,19,.5);color:#e3cfa2;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.wpnrow{position:fixed;left:0;right:0;bottom:calc(var(--safe-b) + 8px);display:flex;justify-content:center;gap:8px;pointer-events:none}
-.wpn{pointer-events:auto;cursor:pointer;width:34px;height:34px;border:1px solid rgba(240,198,116,.22);border-radius:50%;background:rgba(10,14,19,.62);
-  display:flex;align-items:center;justify-content:center;font-size:15px;color:#f0c674;position:relative;overflow:hidden}
-.wpn .cd{position:absolute;inset:0;background:rgba(0,0,0,.55);transform-origin:bottom}
-.wpn em{position:absolute;right:-3px;bottom:-3px;font-size:8px;font-style:normal;background:#f0c674;color:#1a1206;border-radius:2px;padding:0 3px;line-height:12px}
-
-/* ---------- 升级卡 ---------- */
-#levelup{align-items:center;justify-content:center;gap:0;background:radial-gradient(90% 70% at 50% 50%,rgba(30,22,10,.92),rgba(4,6,9,.97))}
-.lu-title{font-size:15px;letter-spacing:.5em;text-indent:.5em;color:#f0c674;margin-bottom:6px}
-.lu-sub{font-size:11px;color:#8a806c;letter-spacing:.2em;margin-bottom:22px}
-.cards{display:flex;flex-direction:column;gap:12px;width:100%;max-width:400px}
-.card{position:relative;display:flex;gap:14px;align-items:center;padding:14px 16px;border:1px solid rgba(240,198,116,.24);
-  background:linear-gradient(135deg,rgba(28,32,38,.92),rgba(14,17,22,.94));border-radius:3px;overflow:hidden;cursor:pointer;
-  transition:transform .12s,border-color .2s,box-shadow .2s}
-.card:active{transform:scale(.985)}
-.card.new{border-color:rgba(111,217,189,.55)}
-.card.new::after{content:"新";position:absolute;top:0;right:0;background:#2e6f60;color:#d8fff4;font-size:9px;padding:2px 6px;letter-spacing:.1em}
-.card.max{border-color:rgba(240,198,116,.7)}
-.card-glyph{width:46px;height:46px;flex:0 0 46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:24px;color:#f6dcab;border:1px solid rgba(240,198,116,.4);
-  background:radial-gradient(circle at 50% 40%,rgba(255,190,110,.30),rgba(255,150,60,.05) 70%);text-shadow:0 0 14px rgba(255,170,80,.6)}
-.card-glyph.jade{color:#b7f2e2;border-color:rgba(111,217,189,.45);background:radial-gradient(circle at 50% 40%,rgba(111,217,189,.28),rgba(60,200,180,.04) 70%);text-shadow:0 0 14px rgba(111,217,189,.55)}
-.card-body{flex:1;min-width:0}
-.card-name{font-size:15px;color:#f4e6c8;letter-spacing:.08em;display:flex;align-items:center;gap:8px}
-.card-name .tag{font-size:9px;color:#7f8f88;border:1px solid rgba(255,255,255,.14);padding:0 4px;border-radius:2px;letter-spacing:.06em}
-.card-desc{margin-top:5px;font-size:11.5px;line-height:1.55;color:#9c9384;word-break:break-word}
-.card-desc b{color:#f0c674;font-weight:600}
-.pips{display:flex;gap:3px;margin-left:auto;flex:0 0 auto}
-.pips i{width:5px;height:5px;border-radius:50%;background:rgba(240,198,116,.18)}
-.pips i.on{background:#f0c674;box-shadow:0 0 6px rgba(240,198,116,.8)}
-
-/* ---------- 结算 / 菜单 ---------- */
-.panel{width:100%;max-width:420px;border:1px solid rgba(240,198,116,.20);border-radius:3px;
-  background:linear-gradient(180deg,rgba(20,24,30,.94),rgba(10,13,18,.96));padding:20px 18px}
-.panel h2{margin:0 0 4px;font-size:24px;letter-spacing:.2em;color:#f4e3bd;font-weight:500}
-.panel .hint{font-size:11px;color:#8a806c;letter-spacing:.14em;margin-bottom:16px}
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin:14px 0}
-.stat{background:rgba(255,255,255,.025);border-left:2px solid rgba(240,198,116,.35);padding:7px 10px}
-.stat span{display:block;font-size:9.5px;color:#8a806c;letter-spacing:.12em}
-.stat b{font-size:16px;color:#f0dcae;font-weight:500;font-variant-numeric:tabular-nums}
-.souls{display:flex;align-items:center;justify-content:center;gap:8px;margin:16px 0 6px;font-size:13px;color:#c9bfa8}
-.souls b{color:#f0c674;font-size:22px;font-weight:500;text-shadow:0 0 16px rgba(240,198,116,.5)}
-.souls-note{text-align:center;font-size:10px;color:#6d6759;letter-spacing:.1em}
-
-/* 灯谱 */
-.meta-list{display:flex;flex-direction:column;gap:9px;width:100%;max-width:420px;margin-top:8px}
-.meta-row{display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid rgba(255,255,255,.07);
-  background:linear-gradient(135deg,rgba(24,28,34,.9),rgba(13,16,21,.9));border-radius:2px}
-.meta-row .g{width:34px;height:34px;flex:0 0 34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:17px;color:#f0c674;border:1px solid rgba(240,198,116,.3)}
-.meta-row .m{flex:1;min-width:0}
-.meta-row .m .n{font-size:13px;color:#e9dcc0;letter-spacing:.06em}
-.meta-row .m .d{font-size:10px;color:#847b6b;margin-top:2px}
-.meta-row .m .pips{margin-top:5px}
-.buy{border:1px solid rgba(240,198,116,.4);background:rgba(240,198,116,.08);color:#f0c674;font-size:11px;
-  padding:7px 10px;border-radius:2px;min-width:62px;text-align:center;font-family:inherit;cursor:pointer;letter-spacing:.04em}
-.buy:disabled{opacity:.32;border-color:rgba(255,255,255,.1);color:#7d7768;background:transparent}
-.balance{display:flex;align-items:center;gap:8px;font-size:12px;color:#b7ab96;letter-spacing:.1em;margin-bottom:4px}
-.balance b{color:#f0c674;font-size:17px}
-.scroll{overflow-y:auto;width:100%;display:flex;flex-direction:column;align-items:center;
-  -webkit-overflow-scrolling:touch;padding:4px 0 10px;touch-action:pan-y}
-.sheet-title{font-size:20px;letter-spacing:.3em;text-indent:.3em;color:#f4e3bd;margin:0 0 4px}
-.sheet-sub{font-size:10px;color:#7d7768;letter-spacing:.16em;margin-bottom:14px}
-
-/* 设置 */
-.set-row{display:flex;align-items:center;justify-content:space-between;padding:12px 2px;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px;color:#ddd3c0}
-.set-row:last-child{border-bottom:0}
-.switch{width:46px;height:26px;border-radius:13px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);position:relative;flex:0 0 46px;cursor:pointer;transition:background .2s}
-.switch i{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#8d8778;transition:transform .2s,background .2s}
-.switch.on{background:rgba(240,198,116,.22);border-color:rgba(240,198,116,.5)}
-.switch.on i{transform:translateX(20px);background:#f0c674}
-.mini{font-size:11px;color:#9a917f;letter-spacing:.06em;background:transparent;border:1px solid rgba(255,255,255,.14);
-  padding:7px 10px;border-radius:2px;font-family:inherit;cursor:pointer}
-
-
-/* ---------- 觉醒 ---------- */
-.awaken{align-items:center;justify-content:center;background:radial-gradient(70% 55% at 50% 50%,rgba(60,38,10,.92),rgba(4,5,8,.98) 70%)}
-.awaken.on{display:flex}
-.aw-rays{position:absolute;inset:-40%;background:conic-gradient(from 0deg,rgba(255,196,110,.0) 0deg,rgba(255,196,110,.20) 12deg,rgba(255,196,110,0) 24deg);
-  animation:awspin 14s linear infinite;opacity:0}
-.awaken.show .aw-rays{opacity:1;transition:opacity .6s}
-@keyframes awspin{to{transform:rotate(360deg)}}
-.aw-inner{position:relative;text-align:center;z-index:2}
-.aw-tag{font-size:12px;letter-spacing:.8em;text-indent:.8em;color:#e6b45f;margin-bottom:14px;opacity:0}
-.aw-glyph{width:112px;height:112px;margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:54px;color:#fff3d6;border:1px solid rgba(255,206,130,.6);position:relative;
-  background:radial-gradient(circle at 50% 40%,rgba(255,196,110,.42),rgba(255,120,40,.06) 72%);
-  text-shadow:0 0 40px rgba(255,190,110,.9);opacity:0;transform:scale(.6)}
-.aw-name{font-size:38px;letter-spacing:.22em;text-indent:.22em;color:#ffeccb;opacity:0;transform:translateY(10px);
-  text-shadow:0 0 30px rgba(255,170,70,.65),0 0 70px rgba(255,140,40,.35)}
-.aw-desc{margin-top:12px;font-size:12px;line-height:1.7;color:#c8b593;letter-spacing:.1em;opacity:0;max-width:300px;margin-left:auto;margin-right:auto}
-.awaken.show .aw-tag{animation:awfade .7s .1s forwards}
-.awaken.show .aw-glyph{animation:awpop .8s .15s cubic-bezier(.2,1.6,.4,1) forwards}
-.awaken.show .aw-name{animation:awfade .8s .5s forwards}
-.awaken.show .aw-desc{animation:awfade .8s .9s forwards}
-@keyframes awpop{to{opacity:1;transform:scale(1)}}
-@keyframes awfade{to{opacity:1;transform:none}}
-.awaken.mutate .aw-tag{color:#ff8f6b}
-.awaken.mutate .aw-glyph{background:radial-gradient(circle at 50% 40%,rgba(255,90,60,.5),rgba(180,20,10,.08) 72%);
-  border-color:rgba(255,120,80,.7);color:#ffe0d0;text-shadow:0 0 40px rgba(255,80,50,.95)}
-.awaken.mutate .aw-name{color:#ffd9cc;text-shadow:0 0 30px rgba(255,70,40,.8),0 0 80px rgba(200,30,10,.5)}
-
-/* ---------- 教程 ---------- */
-#tutBar{position:fixed;left:0;right:0;top:calc(var(--safe-t) + 64px);z-index:15;display:none;
-  padding:0 16px;pointer-events:none;text-align:center}
-#tutBar.on{display:block}
-.tut-step{font-size:10px;letter-spacing:.3em;color:#8f8266}
-.tut-text{margin-top:6px;display:inline-block;background:rgba(10,14,20,.86);border:1px solid rgba(240,198,116,.28);
-  color:#f4e6c8;font-size:14px;letter-spacing:.1em;padding:10px 16px;border-radius:3px;max-width:88vw;line-height:1.5}
-.tut-hand{font-size:26px;margin-top:10px;animation:tutbob 1.1s ease-in-out infinite;display:none}
-#tutBar.hand .tut-hand{display:block}
-@keyframes tutbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-
-/* ---------- 故事 ---------- */
-.story-head{padding:4px 2px 10px;border-bottom:1px solid rgba(240,198,116,.16)}
-.tabs{display:flex;gap:8px;margin-top:12px}
-.tab{flex:1;background:transparent;border:1px solid rgba(255,255,255,.12);color:#9c9282;
-  font-family:inherit;font-size:13px;letter-spacing:.2em;padding:9px 0;border-radius:2px}
-.tab.on{color:#f0c674;border-color:rgba(240,198,116,.5);background:rgba(240,198,116,.08)}
-.story-scroll{flex:1;padding:14px 2px 20px;align-items:stretch;touch-action:pan-y}
-.story-body p{font-size:13.5px;line-height:2.05;color:#cfc4ae;margin:0 0 14px;text-indent:2em;letter-spacing:.02em}
-.story-body h3{font-size:17px;color:#f0d9a8;letter-spacing:.16em;margin:22px 0 10px;font-weight:500}
-.story-body .quote{color:#e6c98f;border-left:2px solid rgba(240,198,116,.4);padding-left:12px;text-indent:0;
-  font-style:normal;font-size:13px;line-height:1.9;margin:16px 0}
-.codex-item{border:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg,rgba(24,28,34,.9),rgba(12,15,20,.9));
-  border-radius:2px;padding:13px 14px;margin-bottom:10px;position:relative}
-.codex-item .ci-name{font-size:15px;color:#f0dcae;letter-spacing:.1em}
-.codex-item .ci-sub{font-size:10.5px;color:#8a8070;margin-top:4px;letter-spacing:.06em}
-.codex-item.locked{opacity:.5}
-.codex-item.mutate{border-color:rgba(255,110,70,.35)}
-.codex-item.mutate .ci-name{color:#ffb59c}
-.codex-tag{position:absolute;right:10px;top:10px;font-size:9px;letter-spacing:.14em;border:1px solid rgba(240,198,116,.4);
-  color:#e6c98f;padding:1px 6px;border-radius:2px}
-.codex-tag.mutate{border-color:rgba(255,110,70,.55);color:#ff9b7a}
-.story-article h3{margin-top:0}
-.story-article .back-line{margin:6px 0 18px}
-
-/* 提示 */
-#toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 84px);transform:translateX(-50%) translateY(8px);
-  background:rgba(14,18,24,.94);border:1px solid rgba(240,198,116,.3);color:#f0dcae;font-size:12px;
-  padding:9px 16px;border-radius:2px;letter-spacing:.08em;opacity:0;transition:opacity .25s,transform .25s;
-  z-index:60;pointer-events:none;max-width:86vw;text-align:center}
-#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-
-/* 首次触屏提示 */
-#tip{position:fixed;left:0;right:0;bottom:22%;text-align:center;color:rgba(240,220,180,.55);font-size:12px;
-  letter-spacing:.2em;z-index:11;pointer-events:none;opacity:0;transition:opacity .6s}
-#tip.on{opacity:1}
-
-/* 转场 */
-#fade{position:fixed;inset:0;background:#04060a;z-index:80;opacity:0;pointer-events:none;transition:opacity .35s}
-#fade.on{opacity:1}
-
-@media (max-height:680px){
-  .brand .zh{font-size:44px}
-  .menu{margin-top:18px;gap:9px}
-  .btn{padding:12px 26px;font-size:16px}
-  .lu-sub{margin-bottom:14px}
-  .card{padding:11px 13px}
-}
-@media (min-width:760px){
-  .screen{padding-left:max(20px,calc(50vw - 320px));padding-right:max(20px,calc(50vw - 320px))}
-}
-
-#wpnInfo{position:fixed;inset:0;z-index:60;display:none;align-items:flex-end;justify-content:center;
-  background:rgba(4,6,9,.62);backdrop-filter:blur(3px);padding:0 12px calc(env(safe-area-inset-bottom,0px) + 64px)}
-#wpnInfo.on{display:flex}
-#wpnInfo .sheet{width:100%;max-width:420px;max-height:64vh;overflow:auto;border:1px solid rgba(240,198,116,.22);
-  border-radius:14px;background:linear-gradient(180deg,rgba(16,20,27,.97),rgba(9,12,17,.97));padding:14px}
-#wpnInfo h3{font-family:"Songti SC",serif;font-size:17px;color:#f0c674;letter-spacing:.2em;margin:0 0 10px;text-align:center}
-.wi-row{display:flex;gap:10px;padding:9px 4px;border-top:1px solid rgba(255,255,255,.05)}
-.wi-glyph{width:34px;height:34px;flex:0 0 34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-family:"Songti SC",serif;color:#f0c674;border:1px solid rgba(240,198,116,.3);background:rgba(10,14,19,.7)}
-.wi-main{flex:1;min-width:0}
-.wi-name{font-size:14px;color:#f4ead2;display:flex;align-items:center;gap:6px}
-.wi-lv{font-size:11px;color:#8fa4bb}
-.wi-desc{font-size:12px;line-height:1.55;color:#9fb0c4;margin-top:3px}
-.wi-desc b{color:#ffd08a;font-weight:600}
-.wi-form{font-size:10px;padding:1px 6px;border-radius:99px;border:1px solid rgba(240,198,116,.35);color:#f0c674}
-.wi-form.mutate{color:#ff8a6a;border-color:rgba(255,120,90,.45)}
-#wpnInfoClose{margin-top:10px;width:100%;padding:10px;border-radius:10px;border:1px solid rgba(240,198,116,.3);
-  background:rgba(240,198,116,.12);color:#f0c674;font-size:14px;letter-spacing:.2em}
-#pick .wgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
-#pick .wcard{position:relative;padding:10px 6px;border-radius:10px;border:1px solid rgba(240,198,116,.2);
-  background:rgba(12,16,22,.8);text-align:center;cursor:pointer}
-#pick .wcard .g{font-family:"Songti SC",serif;font-size:20px;color:#f0c674}
-#pick .wcard .n{font-size:11px;color:#c9d6e4;margin-top:4px}
-#pick .wcard.sel{border-color:#f0c674;background:rgba(240,198,116,.16);box-shadow:0 0 0 1px rgba(240,198,116,.35) inset}
-#pick .wcard.lock{opacity:.32;cursor:not-allowed}
-</style>
+<title>彩潮 · CHROMA TIDE</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<canvas id="cv"></canvas>
+<div id="app">
+  <canvas id="gl"></canvas>
+  <canvas id="fx2d"></canvas>
+  <div id="vignette"></div>
+  <div id="flash"></div>
 
-<!-- HUD -->
-<div id="hud">
-  <div class="hud-top">
-    <div class="bar-wrap">
-      <div class="hpbar"><i id="hpFill"></i><b id="hpText">100 / 100</b></div>
-      <div class="xpbar"><i id="xpFill"></i></div>
-    </div>
-    <div class="hud-right">
-      <div id="btnPause" role="button" aria-label="暂停">❙❙</div>
-      <div class="timer" id="timeText">00:00</div>
-      <div class="kills" id="killText">斩 0</div>
-      <div class="lvl" id="lvlText">灯 1</div>
-    </div>
-  </div>
-  <div class="wpnrow" id="wpnRow"></div>
-</div>
-<div id="wpnInfo"><div class="sheet">
-  <h3>灯 器</h3>
-  <div id="wpnInfoList"></div>
-  <button id="wpnInfoClose">收 起</button>
-</div></div>
-<div id="tip">拖动屏幕 · 提灯而行</div>
-
-<!-- 开局选灯器 -->
-<div class="screen center" id="pick">
-  <div class="panel" style="max-width:380px">
-    <h2 class="serif">择 一 盏 灯</h2>
-    <div class="hint">开局带你最顺手的那件（只列已解锁）</div>
-    <div class="wgrid" id="pickGrid"></div>
-    <div style="display:flex;gap:10px;margin-top:16px">
-      <button class="btn ghost" id="btnPickBack">返 回</button>
-      <button class="btn primary" id="btnPickGo">入 夜</button>
-    </div>
-  </div>
-</div>
-
-<!-- 标题 -->
-<div class="screen on" id="title">
-  <div class="brand">
-    <div class="zh serif">引魂灯</div>
-    <div class="sub">长夜无尽 · 唯灯不熄</div>
-  </div>
-  <div class="rule"></div>
-  <div class="menu">
-    <button class="btn primary" id="btnStart">入 夜</button>
-    <div class="btn-row">
-      <button class="btn ghost" id="btnMeta">灯 谱</button>
-      <button class="btn ghost" id="btnStory">故 事</button>
-    </div>
-    <div class="btn-row">
-      <button class="btn ghost" id="btnTutorial">新手教程</button>
-      <button class="btn ghost" id="btnSet">设 置</button>
-    </div>
-  </div>
-  <div class="foot-stat">
-    <span>最长夜 <b id="bestTime">00:00</b></span>
-    <span>魂火 <b id="soulCount">0</b></span>
-  </div>
-  <div class="ver">v7.6.0</div>
-</div>
-
-<!-- 灯谱 -->
-<div class="screen" id="meta">
-  <div class="scroll">
-    <h2 class="sheet-title serif">灯 谱</h2>
-    <div class="sheet-sub">以魂火祭灯，照得更远一些</div>
-    <div class="balance">魂火 <b id="metaSouls">0</b></div>
-    <div class="meta-list" id="metaList"></div>
-  </div>
-  <div style="display:flex;justify-content:center;padding-top:10px">
-    <button class="btn ghost" id="btnMetaBack">返 回</button>
-  </div>
-</div>
-
-<!-- 升级 -->
-<div class="screen" id="levelup">
-  <div class="lu-title serif">择 一 灯 诀</div>
-  <div class="lu-sub" id="luSub">灯火更盛</div>
-  <div class="cards" id="cards"></div>
-</div>
-
-<!-- 暂停 -->
-<div class="screen center" id="pause">
-  <div class="panel" style="text-align:center;max-width:340px">
-    <h2 class="serif">灯 暂 歇</h2>
-    <div class="hint">长夜不等人</div>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
-      <button class="btn primary" id="btnResume">继 续</button>
-      <button class="btn ghost" id="btnPauseSet">设 置</button>
-      <button class="btn ghost" id="btnGiveUp">熄 灯 离 开</button>
-    </div>
-  </div>
-</div>
-
-<!-- 结算 -->
-<div class="screen center" id="over">
-  <div class="panel">
-    <h2 class="serif" id="overTitle">灯 灭 了</h2>
-    <div class="hint" id="overHint">雾里再没有光</div>
-    <div class="stat-grid">
-      <div class="stat"><span>存活</span><b id="ovTime">00:00</b></div>
-      <div class="stat"><span>斩魂</span><b id="ovKill">0</b></div>
-      <div class="stat"><span>灯阶</span><b id="ovLvl">1</b></div>
-      <div class="stat"><span>最深</span><b id="ovDepth">1</b></div>
-    </div>
-    <div class="souls">拾得魂火 <b id="ovSouls">0</b></div>
-    <div class="souls-note" id="ovNote">魂火可在「灯谱」中永久添灯</div>
-    <div style="display:flex;gap:10px;margin-top:18px">
-      <button class="btn primary" id="btnAgain" style="flex:1;min-width:0">再 走 一 夜</button>
-      <button class="btn ghost" id="btnHome" style="min-width:0;flex:0 0 96px">回 家</button>
-    </div>
-  </div>
-</div>
-
-<!-- 设置 -->
-<div class="screen" id="settings">
-  <div class="scroll">
-    <h2 class="sheet-title serif">设 置</h2>
-    <div class="sheet-sub">夜里也要有点声音</div>
-    <div class="panel" style="max-width:420px">
-      <div class="set-row"><span>音效</span><div class="switch on" id="swSound"><i></i></div></div>
-      <div class="set-row"><span>震动</span><div class="switch on" id="swHaptic"><i></i></div></div>
-      <div class="set-row"><span>伤害数字</span><div class="switch on" id="swDmg"><i></i></div></div>
-      <div class="set-row"><span>存档</span>
-        <div style="display:flex;gap:8px">
-          <button class="mini" id="btnExport">导出</button>
-          <button class="mini" id="btnImport">导入</button>
+  <!-- ============ HUD ============ -->
+  <div id="hud" class="hidden">
+    <div class="topbar">
+      <div class="hud-left">
+        <div class="hp-row">
+          <svg class="hp-ic" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="M24 41C10 30.5 6 22.5 8.6 16.4 10.8 11 16.5 9.2 21 12.4L24 15l3-2.6c4.5-3.2 10.2-1.4 12.4 4C42 22.5 38 30.5 24 41z" fill="#C85C6A" stroke="#1A1714" stroke-width="2.5"/>
+            <path d="M19.5 19c-2.6 1-3.6 3.6-3 6.4" fill="none" stroke="#F2E8D5" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+          </svg>
+          <div class="hp-track"><div id="hp-fill"></div></div>
+          <b id="hp-text">100</b>
+        </div>
+        <div class="lv-row">
+          <span class="lv-badge">Lv<b id="lv">1</b></span>
+          <div class="xp-track"><div id="xp-fill"></div></div>
         </div>
       </div>
-      <div class="set-row" style="border-bottom:0"><span>画面异常</span>
-        <button class="mini" id="btnFixGfx">修复画面</button>
+      <div class="hud-right">
+        <div class="stat"><em>时间</em><b id="time">0:00</b></div>
+        <div class="stat"><em>收割</em><b id="kills">0</b></div>
+        <button id="btn-pause" class="icon-btn" aria-label="暂停"><i></i><i></i></button>
       </div>
     </div>
-    <p style="font-size:10.5px;line-height:1.7;color:#6d6759;max-width:420px;margin:14px 0 0;letter-spacing:.04em">
-      存档保存在本机浏览器（localStorage）。换设备、换浏览器、换网址或清理缓存都会丢失，<br>
-      请定期用「导出」保存一份 JSON，在新设备上「导入」即可恢复。
-    </p>
-    <input type="file" id="fileImport" accept="application/json,.json" style="display:none">
+
+    <div id="bossbar" class="hidden">
+      <div class="boss-top"><strong id="boss-name">墨渊巨像</strong><em>BOSS</em></div>
+      <div class="boss-track"><div id="boss-fill"></div></div>
+    </div>
+
+    <div id="combo" class="hidden"><em>×</em><b id="combo-n">0</b><span>连斩</span></div>
   </div>
-  <div style="display:flex;justify-content:center;gap:10px;padding-top:10px">
-    <button class="btn ghost" id="btnSetBack">返 回</button>
-  </div>
-</div>
 
+  <div id="toast" class="toast"></div>
 
-<!-- 觉醒演出 -->
-<div class="screen awaken" id="awaken">
-  <div class="aw-rays" id="awRays"></div>
-  <div class="aw-inner">
-    <div class="aw-tag" id="awTag">觉 醒</div>
-    <div class="aw-glyph" id="awGlyph">焰</div>
-    <div class="aw-name serif" id="awName">九幽灯焰</div>
-    <div class="aw-desc" id="awDesc"></div>
-  </div>
-</div>
-
-<!-- 教程提示条 -->
-<div id="tutBar">
-  <div class="tut-step" id="tutStep">第 1 步 / 共 5 步</div>
-  <div class="tut-text" id="tutText">拖动屏幕，提灯而行</div>
-  <div class="tut-hand" id="tutHand">☝</div>
-</div>
-
-<!-- 故事 -->
-<div class="screen" id="story">
-  <div class="story-head">
-    <h2 class="sheet-title serif">长夜残卷</h2>
-    <div class="tabs">
-      <button class="tab on" id="tabWorld">世界观</button>
-      <button class="tab" id="tabCodex">灯器谱</button>
+  <!-- ============ 操作 ============ -->
+  <div id="controls" class="hidden">
+    <div id="stick-zone"></div>
+    <div id="stick" class="hidden"><div class="stick-base"></div><div class="stick-knob"></div></div>
+    <div class="actions">
+      <button id="btn-ult" class="act ult" aria-label="万彩归一"></button>
+      <button id="btn-dash" class="act dash" aria-label="闪身"></button>
     </div>
   </div>
-  <div class="scroll story-scroll" id="storyBody"></div>
-  <div class="story-foot">
-    <button class="btn ghost" id="btnStoryBack">返 回</button>
+
+  <!-- ============ 标题 ============ -->
+  <div id="screen-title" class="screen title-screen hidden">
+    <div class="wash w1"></div>
+    <div class="wash w2"></div>
+    <div class="title-inner">
+      <div class="eyebrow">CHROMA TIDE</div>
+      <h1 class="logo"><span>彩</span><span>潮</span></h1>
+      <div class="logo-rule"></div>
+      <p class="tagline">把颜色，还给荒原。</p>
+      <div class="best-line" id="best-line">尚无记录 · 第一笔由你落下</div>
+      <button id="btn-start" class="btn-primary btn-start">开始收割</button>
+      <div class="title-links">
+        <button id="btn-help" class="btn-link">玩法</button>
+        <button id="btn-sound" class="btn-link">音效 · 开</button>
+        <button id="btn-save" class="btn-link">存档</button>
+      </div>
+      <div class="title-note">竖屏 · 自动攻击 · 单局 6 分钟</div>
+    </div>
   </div>
+
+  <!-- ============ 升级 ============ -->
+  <div id="screen-levelup" class="screen hidden">
+    <div class="panel level-panel">
+      <div class="panel-kicker">颜色在你体内翻涌</div>
+      <h2>选择一笔</h2>
+      <div id="cards" class="cards"></div>
+      <div class="key-hint">点击卡牌 · 或按 1 / 2 / 3</div>
+    </div>
+  </div>
+
+  <!-- ============ 暂停 ============ -->
+  <div id="screen-pause" class="screen hidden">
+    <div class="panel">
+      <div class="panel-kicker">墨潮暂歇</div>
+      <h2>停笔</h2>
+      <div id="pause-stats"></div>
+      <div class="panel-actions">
+        <button id="btn-resume" class="btn-primary">继续</button>
+        <div class="row">
+          <button id="btn-restart" class="btn-ghost">重新开始</button>
+          <button id="btn-quit" class="btn-ghost">回到标题</button>
+        </div>
+        <div class="row small">
+          <button id="btn-help2" class="btn-link">玩法</button>
+          <button id="btn-save2" class="btn-link">存档</button>
+          <button id="btn-sound2" class="btn-link">音效 · 开</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 结算 ============ -->
+  <div id="screen-end" class="screen hidden">
+    <div class="panel end-panel">
+      <div class="panel-kicker" id="end-kicker"></div>
+      <h2 id="end-title">潮水退去</h2>
+      <div id="end-stats"></div>
+      <div id="end-best"></div>
+      <div class="panel-actions">
+        <button id="btn-again" class="btn-primary">再来一局</button>
+        <button id="btn-home" class="btn-ghost">回到标题</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 弹窗 ============ -->
+  <div id="modal" class="screen hidden">
+    <div class="panel modal-panel">
+      <h2 id="modal-title">玩法</h2>
+      <div id="modal-body"></div>
+      <button id="modal-close" class="btn-primary">知道了</button>
+    </div>
+  </div>
+
+  <div id="loading">
+    <div class="load-mark">彩潮</div>
+    <div class="load-sub">研墨中</div>
+    <div class="load-bar"><i></i></div>
+  </div>
+  <input id="file-input" type="file" accept="application/json" hidden>
 </div>
 
-<div id="toast"></div>
-<div id="fade"></div>
-
-<script src="story.js?v=7.6.0"></script>
-<script src="game.js?v=7.6.0"></script>
+<script src="js/three.min.js"></script>
+<script src="js/art.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+<script>
+window.addEventListener('load', function () {
+  try { CT.Game.boot(); }
+  catch (err) {
+    document.getElementById('loading').innerHTML = '<div class="load-mark">启动失败</div><div class="load-sub">' + (err && err.message ? err.message : '未知错误') + '</div>';
+    console.error(err);
+  }
+});
+document.addEventListener('pointerdown', function () { if (window.CT && CT.Sound) CT.Sound.resume(); }, { once: true });
+(function () {
+  var local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+  if ('serviceWorker' in navigator && !/[?&]app=1/.test(location.search) && !local && location.protocol.indexOf('http') === 0) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js').catch(function () { }); });
+  }
+})();
+</script>
 </body>
 </html>
