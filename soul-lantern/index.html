@@ -163,7 +163,7 @@ document.addEventListener('pointerdown', function () { if (window.CT && CT.Sound
 (function () {
   var local = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
   if ('serviceWorker' in navigator && !/[?&]app=1/.test(location.search) && !local && location.protocol.indexOf('http') === 0) {
-    window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js').catch(function () { }); });
+    window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js?v=1.0.1').catch(function () { }); });
   }
 })();
 </script>
